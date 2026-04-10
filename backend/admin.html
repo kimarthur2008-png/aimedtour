@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart K-Medi — Админка</title>
+  <style>
+    :root {
+      --blue: #2563eb;
+      --green: #16a34a;
+      --yellow: #d97706;
+      --red: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Header ── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo { font-weight: 700; font-size: 18px; color: var(--blue); }
+    #auth-section { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+    #user-label { color: var(--muted); }
+    .btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+
+    /* ── Login screen ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: calc(100vh - 56px);
+    }
+    .login-box {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 40px; width: 360px; text-align: center;
+    }
+    .login-box h2 { margin-bottom: 8px; }
+    .login-box p { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+    .form-group input {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 14px; outline: none;
+    }
+    .form-group input:focus { border-color: var(--blue); }
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+    .alert-error { background: #fef2f2; color: var(--red); border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
+
+    /* ── Main layout ── */
+    #admin-screen { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .page-sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+    /* ── Stats bar ── */
+    .stats-row { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 24px; flex: 1; min-width: 130px;
+    }
+    .stat-card .num { font-size: 28px; font-weight: 700; }
+    .stat-card .lbl { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .stat-card.new-color .num  { color: var(--blue); }
+    .stat-card.prog-color .num { color: var(--yellow); }
+    .stat-card.done-color .num { color: var(--green); }
+
+    /* ── Filters ── */
+    .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--muted);
+      transition: all .15s;
+    }
+    .filter-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .search-box {
+      padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; outline: none; width: 220px; margin-left: auto;
+    }
+    .search-box:focus { border-color: var(--blue); }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--bg); }
+    th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+    td { padding: 14px 16px; font-size: 14px; border-top: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: #f8fafc; }
+
+    /* ── Status badge ── */
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .badge-new      { background: #dbeafe; color: var(--blue); }
+    .badge-progress { background: #fef3c7; color: var(--yellow); }
+    .badge-done     { background: #dcfce7; color: var(--green); }
+
+    /* ── Status select ── */
+    .status-select {
+      padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; cursor: pointer; outline: none; background: var(--card);
+    }
+    .status-select:focus { border-color: var(--blue); }
+
+    /* ── Empty / loading ── */
+    .empty-row td { text-align: center; color: var(--muted); padding: 40px; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #1e293b; color: #fff; padding: 12px 20px; border-radius: 10px;
+      font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏥 Smart K-Medi <span style="font-weight:400;color:var(--muted);font-size:14px">/ Админка</span></div>
+  <div id="auth-section">
+    <span id="user-label"></span>
+    <button class="btn btn-outline btn-sm" id="logout-btn" style="display:none" onclick="doLogout()">Выйти</button>
+  </div>
+</header>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="font-size:40px;margin-bottom:12px">🔐</div>
+    <h2>Вход в Админку</h2>
+    <p>Только для авторизованных менеджеров</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="manager@example.com">
+    </div>
+    <div class="form-group">
+      <label>Пароль</label>
+      <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Войти</button>
+    <div id="login-alert"></div>
+  </div>
+</div>
+
+<!-- ── ADMIN SCREEN ── -->
+<div id="admin-screen">
+  <div class="page-title">📋 Заявки на консультацию</div>
+  <div class="page-sub">Управление статусами заявок · обновления применяются сразу в Firestore</div>
+
+  <!-- Статистика -->
+  <div class="stats-row">
+    <div class="stat-card new-color">
+      <div class="num" id="stat-new">—</div>
+      <div class="lbl">🔵 Новые</div>
+    </div>
+    <div class="stat-card prog-color">
+      <div class="num" id="stat-progress">—</div>
+      <div class="lbl">🟡 В работе</div>
+    </div>
+    <div class="stat-card done-color">
+      <div class="num" id="stat-done">—</div>
+      <div class="lbl">🟢 Выполнены</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-total">—</div>
+      <div class="lbl">📊 Всего</div>
+    </div>
+  </div>
+
+  <!-- Фильтры + поиск -->
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all"        onclick="setFilter('all', this)">Все</button>
+    <button class="filter-btn"        data-filter="new"        onclick="setFilter('new', this)">🔵 Новые</button>
+    <button class="filter-btn"        data-filter="in-progress" onclick="setFilter('in-progress', this)">🟡 В работе</button>
+    <button class="filter-btn"        data-filter="done"       onclick="setFilter('done', this)">🟢 Выполнены</button>
+    <input class="search-box" id="search-input" placeholder="🔍 Поиск по имени или email..." oninput="renderTable()">
+  </div>
+
+  <!-- Таблица заявок -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Имя</th>
+          <th>Email</th>
+          <th>Телефон</th>
+          <th>Страна</th>
+          <th>Болезнь</th>
+          <th>Дата</th>
+          <th>Статус</th>
+          <th>Изменить</th>
+        </tr>
+      </thead>
+      <tbody id="consultations-tbody">
+        <tr class="empty-row"><td colspan="8"><div class="spinner"></div> Загрузка...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp }                    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+                                              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc }
+                                              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ── Firebase конфиг (тот же что в app.js) ──
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCL5X6al6p54ELIJmiMeEGGsF2jbVyCRz0",
+    authDomain:        "abas-d36ca.firebaseapp.com",
+    projectId:         "abas-d36ca",
+    storageBucket:     "abas-d36ca.firebasestorage.app",
+    messagingSenderId: "727176599054",
+    appId:             "1:727176599054:web:b62b3fa544586759958e5f",
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // ── Экспортируем в window для onclick-обработчиков ──
+  window._auth = auth;
+  window._db   = db;
+
+  // ── Состояние ──
+  let allConsultations = [];
+  let currentFilter    = 'all';
+
+  // ── Auth state: показываем нужный экран ──
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      document.getElementById('login-screen').style.display  = 'none';
+      document.getElementById('admin-screen').style.display  = 'block';
+      document.getElementById('user-label').textContent      = user.displayName || user.email;
+      document.getElementById('logout-btn').style.display    = 'inline-block';
+      await fetchConsultations();
+    } else {
+      document.getElementById('login-screen').style.display  = 'flex';
+      document.getElementById('admin-screen').style.display  = 'none';
+      document.getElementById('user-label').textContent      = '';
+      document.getElementById('logout-btn').style.display    = 'none';
+    }
+  });
+
+  // ── Загрузка всех заявок из Firestore ──
+  async function fetchConsultations() {
+    const snap = await getDocs(collection(db, 'consultations'));
+    allConsultations = [];
+    snap.forEach(d => allConsultations.push({ id: d.id, ...d.data() }));
+    // Сортировка: new → in-progress → done, внутри — по дате (новые сверху)
+    const order = { 'new': 0, 'in-progress': 1, 'done': 2 };
+    allConsultations.sort((a, b) => {
+      const statusDiff = (order[a.status] ?? 9) - (order[b.status] ?? 9);
+      if (statusDiff !== 0) return statusDiff;
+      return (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0);
+    });
+    updateStats();
+    renderTable();
+  }
+
+  // ── Статистика ──
+  function updateStats() {
+    const counts = { new: 0, 'in-progress': 0, done: 0 };
+    allConsultations.forEach(c => { if (counts[c.status] !== undefined) counts[c.status]++; });
+    document.getElementById('stat-new').textContent      = counts['new'];
+    document.getElementById('stat-progress').textContent = counts['in-progress'];
+    document.getElementById('stat-done').textContent     = counts['done'];
+    document.getElementById('stat-total').textContent    = allConsultations.length;
+  }
+
+  // ── Рендер таблицы с учётом фильтра и поиска ──
+  window.renderTable = function() {
+    const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+    let data = allConsultations;
+
+    if (currentFilter !== 'all') {
+      data = data.filter(c => c.status === currentFilter);
+    }
+    if (q) {
+      data = data.filter(c =>
+        (c.name  || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.disease || '').toLowerCase().includes(q)
+      );
+    }
+
+    const tbody = document.getElementById('consultations-tbody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Заявки не найдены</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(c => {
+      const date = c.createdAt?.seconds
+        ? new Date(c.createdAt.seconds * 1000).toLocaleDateString('ru-RU', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })
+        : '—';
+
+      const badgeClass = { 'new': 'badge-new', 'in-progress': 'badge-progress', 'done': 'badge-done' }[c.status] || 'badge-new';
+      const badgeLabel = { 'new': '🔵 Новая', 'in-progress': '🟡 В работе', 'done': '🟢 Выполнена' }[c.status] || c.status;
+
+      return `
+        <tr>
+          <td><strong>${esc(c.name)}</strong></td>
+          <td><a href="mailto:${esc(c.email)}" style="color:var(--blue)">${esc(c.email)}</a></td>
+          <td>${esc(c.phone) || '—'}</td>
+          <td>${esc(c.country) || '—'}</td>
+          <td>${esc(c.disease) || '—'}</td>
+          <td style="color:var(--muted);font-size:13px">${date}</td>
+          <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+          <td>
+            <select class="status-select" onchange="changeStatus('${c.id}', this.value)">
+              <option value="new"         ${c.status === 'new'         ? 'selected' : ''}>🔵 Новая</option>
+              <option value="in-progress" ${c.status === 'in-progress' ? 'selected' : ''}>🟡 В работе</option>
+              <option value="done"        ${c.status === 'done'        ? 'selected' : ''}>🟢 Выполнена</option>
+            </select>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  };
+
+  // ── BE-10: смена статуса — пишет в Firestore ──
+  window.changeStatus = async function(id, newStatus) {
+    try {
+      await updateDoc(doc(db, 'consultations', id), { status: newStatus });
+      // Обновляем локальный массив без перезагрузки
+      const item = allConsultations.find(c => c.id === id);
+      if (item) item.status = newStatus;
+      updateStats();
+      renderTable();
+      showToast('✅ Статус обновлён');
+    } catch(e) {
+      showToast('❌ Ошибка: ' + e.message);
+      console.error(e);
+    }
+  };
+
+  // ── Фильтр по статусу ──
+  window.setFilter = function(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  };
+
+  // ── Логин / Выход ──
+  window.doLogin = async function() {
+    const email   = document.getElementById('login-email').value.trim();
+    const pass    = document.getElementById('login-pass').value;
+    const alertEl = document.getElementById('login-alert');
+    alertEl.innerHTML = '';
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch(e) {
+      let msg = 'Ошибка входа';
+      if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(e.code))
+        msg = 'Неверный email или пароль';
+      alertEl.innerHTML = `<div class="alert alert-error">${msg}</div>`;
+    }
+  };
+
+  window.doLogout = async function() {
+    await signOut(auth);
+  };
+
+  // ── Вспомогательные ──
+  function esc(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+</body>
+</html>
