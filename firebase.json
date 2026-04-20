@@ -1,10 +1,13 @@
 {
   "hosting": {
-    "public": "prototype",
+    "public": "frontend/out",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ]
+  },
+  "functions": {
+    "source": "backend/functions"
   }
 }
