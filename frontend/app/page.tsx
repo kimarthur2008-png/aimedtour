@@ -11,7 +11,8 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-teal-600 to-teal-800 text-white py-24 px-4">
+      <section className="">
+        <img src="/images/hero-bg.svg" alt="Hero Background" className="absolute inset-0 w-full h-full object-cover -z-10" />
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
             Лечение в Корее — просто и надёжно
