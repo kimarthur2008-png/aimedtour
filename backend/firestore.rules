@@ -2,42 +2,171 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Публичное чтение, запись только для авторизованных
-    match /hospitals/{id}  { allow read: if true; allow write: if request.auth != null; }
-    match /diseases/{id}   { allow read: if true; allow write: if request.auth != null; }
-    match /cases/{id}      { allow read: if true; allow write: if request.auth != null; }
-    match /tourism/{id}    { allow read: if true; allow write: if request.auth != null; }
-    match /settings/{id}   { allow read: if true; allow write: if request.auth != null; }
+    // ══════════════════════════════════════════════════════
+    //  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+    // ══════════════════════════════════════════════════════
 
-    // Заявки: создать может любой (форма без входа), читать/менять — только auth
-    // BE-10: updateDoc для смены статуса (new → in-progress → done) — покрывается update
+    // Пользователь залогинен?
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Документ принадлежит этому пользователю?
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // Роль берётся из Firebase Custom Claims (JWT-токен).
+    // Назначается через setUserRole в functions/src/index.ts.
+    // get("role", "user") — если claim не задан, считаем role = "user".
+    function role() {
+      return request.auth.token.get("role", "user");
+    }
+
+    function isAdmin() {
+      return isAuth() && role() == "admin";
+    }
+
+    function isCoordinator() {
+      return isAuth() && role() == "coordinator";
+    }
+
+    // ── Валидация заявки при создании ─────────────────────
+    // Проверяем поля на сервере — клиентскую валидацию легко обойти.
+    // Без этого любой скрипт мог создать тысячи мусорных заявок.
+    function isValidConsultation() {
+      let d = request.resource.data;
+      return d.name    is string && d.name.size()  > 0 && d.name.size()  <= 100
+          && d.email   is string && d.email.size() > 0 && d.email.size() <= 200
+          && d.status  == "new"
+          && d.createdAt == request.time; // serverTimestamp — не подделать
+    }
+
+    // ── Валидация update координатором ────────────────────
+    // Координатор может менять ТОЛЬКО поле status.
+    // Все остальные поля должны остаться прежними.
+    // Защита: нельзя подменить email пациента или coordinatorId.
+    function isValidCoordinatorUpdate() {
+      let d = request.resource.data;
+      let e = resource.data;
+      return d.coordinatorId == e.coordinatorId  // coordinatorId не трогает
+          && d.email         == e.email          // email не трогает
+          && d.name          == e.name           // имя не трогает
+          && d.status in ["new", "in-progress", "done"]; // только валидные статусы
+    }
+
+
+    // ══════════════════════════════════════════════════════
+    //  ПУБЛИЧНЫЕ КОЛЛЕКЦИИ
+    //  Читают все (публичный сайт).
+    //  Пишет только admin — через Админ-панель или Functions.
+    //
+    //  БЫЛО: allow write: if request.auth != null
+    //  → любой залогиненный мог удалить больницу или болезнь
+    //  СТАЛО: только admin
+    // ══════════════════════════════════════════════════════
+    match /hospitals/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /diseases/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /cases/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /tourism/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+
+    // ══════════════════════════════════════════════════════
+    //  КОНСУЛЬТАЦИИ — права по ролям
+    //
+    //  user        → создать заявку (без входа), видеть только свои
+    //  coordinator → только заявки где coordinatorId == его uid
+    //                может менять ТОЛЬКО статус
+    //  admin       → полный доступ: всё видит, всё меняет
+    // ══════════════════════════════════════════════════════
     match /consultations/{id} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
+
+      // Создать — любой, но поля валидируются на сервере
+      allow create: if isValidConsultation();
+
+      // Пользователь видит только свои заявки
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+
+      // Координатор читает только назначенные ему заявки
+      allow read: if isCoordinator()
+                  && resource.data.coordinatorId == request.auth.uid;
+
+      // Координатор меняет только статус своей заявки
+      allow update: if isCoordinator()
+                    && resource.data.coordinatorId == request.auth.uid
+                    && isValidCoordinatorUpdate();
+
+      // Admin — полный доступ
+      allow read, update, delete: if isAdmin();
     }
 
-    // Пользователи: только свой профиль
+
+    // ══════════════════════════════════════════════════════
+    //  ПОЛЬЗОВАТЕЛИ
+    //  Каждый видит и редактирует только свой профиль.
+    //  Admin читает и пишет всех (для управления ролями).
+    // ══════════════════════════════════════════════════════
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if isOwner(uid);
+      allow read, write: if isAdmin();
     }
 
-    // Результаты алгоритма: только авторизованные
+
+    // ══════════════════════════════════════════════════════
+    //  РЕЗУЛЬТАТЫ АЛГОРИТМА
+    //  Каждый видит только свои результаты.
+    //
+    //  БЫЛО: allow read, write: if request.auth != null
+    //  → любой залогиненный читал результаты ВСЕХ пользователей
+    //  СТАЛО: только владелец или admin
+    // ══════════════════════════════════════════════════════
     match /algorithmResults/{id} {
-      allow read, write: if request.auth != null;
+      allow create: if isAuth()
+                    && request.resource.data.userId == request.auth.uid;
+
+      allow read, update, delete: if isAuth()
+                    && resource.data.userId == request.auth.uid;
+
+      allow read: if isAdmin();
     }
+
   }
 }
 
-// ── BE-08: Firebase Storage Rules ──────────────────────────────────────────
-// Добавь эти правила в Firebase Console → Storage → Rules:
+
+// ══════════════════════════════════════════════════════════
+//  FIREBASE STORAGE RULES
+//  Добавь в Firebase Console → Storage → Rules
+// ══════════════════════════════════════════════════════════
 //
 // rules_version = '2';
 // service firebase.storage {
 //   match /b/{bucket}/o {
 //     match /images/{allPaths=**} {
-//       allow read: if true;                       // публичное чтение фото
-//       allow write: if request.auth != null;      // загружать могут только auth
+//       allow read:  if true;
+//       allow write: if request.auth != null
+//                    && request.resource.size < 5 * 1024 * 1024
+//                    && request.resource.contentType.matches('image/.*');
 //     }
 //   }
 // }
-
