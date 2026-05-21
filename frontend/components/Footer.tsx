@@ -95,7 +95,7 @@ export default function Footer() {
 </div>
 
     {/* ── Нижняя полоса ──────────────────────────────────────────── */}
-    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+    <div style={{ borderTop: '1px solid rgba(255,255,255, 0.5)' }}>
         <div className="max-w-[1440px] mx-auto px-[clamp(24px,8vw,120px)] py-5 flex flex-col md:flex-row items-center justify-between gap-3">
             <p className="text-caption text-white/40">
                 © 2026 KoreaMedTour. Все права защищены.
