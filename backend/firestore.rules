@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isAuth()  { return request.auth != null; }
+    function isAdmin() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isConsultant() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'consultant';
+    }
+
+    // ── Публичный контент (только чтение) ────────────────────────────────────
+    match /hospitals/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /diseases/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /cases/{id}      { allow read: if true; allow write: if isAdmin(); }
+    match /tourism/{id}    { allow read: if true; allow write: if isAdmin(); }
+    match /settings/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /clinics/{id}    { allow read: if true; allow write: if isAdmin(); }
+
+    // ── Отзывы ───────────────────────────────────────────────────────────────
+    match /reviews/{id} {
+      allow read: if true;
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Заявки на консультацию (форма без входа) ─────────────────────────────
+    match /consultations/{id} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin() || isConsultant();
+    }
+
+    // ── Пользователи ─────────────────────────────────────────────────────────
+    // Свой профиль — читать и писать. Админ — читать всех.
+    match /users/{uid} {
+      allow read:  if isAuth() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAuth() && request.auth.uid == uid;
+    }
+
+    // ── Результаты алгоритма подбора ─────────────────────────────────────────
+    match /algorithmResults/{id} {
+      allow create: if isAuth();
+      allow read:   if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Тикеты поддержки ─────────────────────────────────────────────────────
+    match /supportTickets/{id} {
+      allow create: if isAuth();
+      allow read, update: if isAuth() &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == resource.data.consultantId ||
+         isAdmin());
+    }
+
+    // ── Заявки на должность консультанта ─────────────────────────────────────
+    match /consultantApplications/{id} {
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow read:   if isAdmin() ||
+        (isAuth() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}
