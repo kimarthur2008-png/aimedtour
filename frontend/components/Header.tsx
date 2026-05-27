@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import AuthModal from './AuthModal';
 
 const NAV = [
   { label: 'Главная',              href: '/',          width: 'w-[100px]' },
@@ -20,17 +19,10 @@ export default function Header() {
   const { user }  = useAuth();
   const pathname  = usePathname();
 
-  const [modalOpen,  setModalOpen]  = useState(false);
-  const [modalMode,  setModalMode]  = useState<'login' | 'register'>('login');
   const [langOpen,   setLangOpen]   = useState(false);
   const [lang,       setLang]       = useState('RU');
   const [mobileOpen, setMobileOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
-
-  function openModal(mode: 'login' | 'register') {
-    setModalMode(mode);
-    setModalOpen(true);
-  }
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -109,9 +101,10 @@ export default function Header() {
 
               {user ? (
                   <div className="flex items-center gap-3">
-                <span className="text-sm text-[#21393B] hidden sm:block">
-                  {user.displayName || user.email?.split('@')[0]}
-                </span>
+                    <span className="text-sm text-[#21393B] hidden sm:block">
+                      {user.displayName || user.email?.split('@')[0]}
+                    </span>
+
                     <button
                         onClick={() => signOut(auth)}
                         className="px-4 py-2 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
@@ -121,20 +114,20 @@ export default function Header() {
                   </div>
               ) : (
                   <>
-                    <button
-                        onClick={() => openModal('login')}
+                    <Link
+                        href="/auth"
                         className="flex items-center gap-[4px] px-3 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
                     >
                       <img src="/icons/sign_in.svg" alt="" className="h-4 w-4" />
                       Войти
-                    </button>
-                    <button
-                        onClick={() => openModal('register')}
+                    </Link>
+                    <Link
+                        href="/auth?tab=register"
                         className="flex items-center gap-[4px] px-4 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
                     >
                       <img src="/icons/sign_up.svg" alt="" className="h-4 w-4" />
                       Регистрация
-                    </button>
+                    </Link>
                   </>
               )}
 
@@ -225,17 +218,17 @@ export default function Header() {
                         onClick={() => signOut(auth)}
                         className="flex items-center gap-3 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
                     >
-                      Выйти
+                      Выйти
                     </button>
                 ) : (
-                    <button
-                        onClick={() => { openModal('login'); setMobileOpen(false); }}
+                    <Link
+                        href="/auth"
+                        onClick={() => setMobileOpen(false)}
                         className="flex items-center gap-4 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
                     >
-                      {/* ИКОНКА: <img src="/icons/sign_in.svg" className="h-5 w-5" /> */}
                       <div className="h-5 w-5 rounded bg-gray-200 shrink-0" />
-                      Войти
-                    </button>
+                      Войти
+                    </Link>
                 )}
 
                 {/* CTA */}
@@ -251,12 +244,6 @@ export default function Header() {
               </div>
             </div>
         )}
-
-        <AuthModal
-            isOpen={modalOpen}
-            initialMode={modalMode}
-            onClose={() => setModalOpen(false)}
-        />
       </>
   );
 }
