@@ -15,15 +15,14 @@
  */
 
 import * as functions from 'firebase-functions/v2';
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin   from 'firebase-admin';
-import * as sgMail  from '@sendgrid/mail';
-import { seedIfEmpty } from './seed';
-import { assignCoordinator }  from './consultations';
+import * as admin     from 'firebase-admin';
+import * as sgMail    from '@sendgrid/mail';
+import { seedIfEmpty } from '../../scripts/seed';
+import { findLeastLoadedConsultant } from './consultations';
 
 admin.initializeApp();
 
-const MANAGER_EMAIL = 'manager@smart-k-medi.com'; // ← замени на реальный
+const MANAGER_EMAIL = 'менеджер@smart-k-medi.com';
 const FROM_EMAIL    = 'noreply@smart-k-medi.com';
 
 
@@ -201,8 +200,76 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
 
 
 // ════════════════════════════════════════════════════════════════════════════
-//  BE-SEED — заполнение тестовыми данными
-//  Запускается вручную: firebase functions:call seedDatabase
+//  Авто-назначение консультанта при создании тикета поддержки
+//  Срабатывает когда в /supportTickets появляется новый документ
+// ════════════════════════════════════════════════════════════════════════════
+export const onNewSupportTicket = functions.firestore.onDocumentCreated(
+  'supportTickets/{id}',
+  async (event) => {
+    const ticketId = event.params.id;
+    const data = event.data?.data();
+    if (!data) return;
+
+    // Если консультант уже назначен (например, клиентом) — ничего не делаем
+    if (data.consultantId) {
+      console.log(`[ASSIGN] Тикет ${ticketId} уже имеет консультанта — пропускаем`);
+      return;
+    }
+
+    const db = admin.firestore();
+
+    // Находим наименее загруженного консультанта
+    const consultantId = await findLeastLoadedConsultant('supportTickets', 'consultantId');
+    if (!consultantId) {
+      console.warn(`[ASSIGN] Нет консультантов в коллекции — тикет ${ticketId} не назначен`);
+      return;
+    }
+
+    // consultantId = uid пользователя из /users с role='consultant'
+    const userDoc = await db.collection('users').doc(consultantId).get();
+    const consultantData = userDoc.exists ? (userDoc.data() ?? {}) : {};
+
+    await db.collection('supportTickets').doc(ticketId).update({
+      consultantId,
+      consultantName: consultantData['name'] ?? '',
+      updatedAt: new Date().toISOString(),
+    });
+
+    console.log(`[ASSIGN] Тикет ${ticketId} → консультант ${consultantId}`);
+
+    // Email-уведомление консультанту
+    const consultantEmail = consultantData['email'] as string | undefined;
+    if (consultantEmail) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+      const html = `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+          <div style="background:#7c3aed;padding:20px 24px;border-radius:12px 12px 0 0">
+            <h2 style="color:#fff;margin:0">Smart K-Medi — Новый тикет</h2>
+          </div>
+          <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+            <p>Вам назначен новый тикет поддержки.</p>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:6px 0;color:#64748b;width:120px">Тема</td><td style="font-weight:600">${data['topic'] ?? '—'}</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b">Пациент</td><td>${data['userName'] ?? '—'} (${data['userEmail'] ?? '—'})</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b">Описание</td><td>${data['description'] ?? '—'}</td></tr>
+            </table>
+          </div>
+        </div>`;
+      await sgMail.send({
+        to:      consultantEmail,
+        from:    FROM_EMAIL,
+        subject: `Новый тикет: ${data['topic'] ?? ticketId}`,
+        text:    `Вам назначен тикет: ${data['topic']}\nПациент: ${data['userName']}\n${data['description']}`,
+        html,
+      });
+      console.log(`[ASSIGN] Email отправлен ${consultantEmail}`);
+    }
+  }
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BE-SEED — Заполнение Firestore тестовыми данными
+//  Запускается вручную один раз: firebase functions:call seedDatabase
 // ════════════════════════════════════════════════════════════════════════════
 export const seedDatabase = functions.https.onCall(async (request) => {
   if (!request.auth) {
@@ -211,3 +278,4 @@ export const seedDatabase = functions.https.onCall(async (request) => {
   await seedIfEmpty();
   return { success: true, message: 'Seed выполнен' };
 });
+

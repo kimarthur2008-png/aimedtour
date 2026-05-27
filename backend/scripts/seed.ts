@@ -140,5 +140,38 @@ export async function seedIfEmpty() {
     console.log(`[seed] добавлено ${places.length} туристических мест`);
   }
 
+  // ── Консультанты ────────────────────────────────────────────────────────────
+  // ВАЖНО: document ID должен совпадать с Firebase Auth UID консультанта.
+  // После создания аккаунта консультанта в Firebase Console замените placeholder-ID
+  // на реальный UID: Firebase Console → Authentication → Users → скопировать UID.
+  const consultantsSnap = await db.collection('consultants').get();
+  if (consultantsSnap.empty) {
+    const consultants = [
+      {
+        name:      'Анна Косметолога',
+        email:     'anna@smart-k-medi.com',
+        phone:     '+996 312 234567',
+        role:      'consultant',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {
+        name:      'Борис Кардиолог',
+        email:     'boris@smart-k-medi.com',
+        phone:     '+996 312 234568',
+        role:      'consultant',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      {
+        name:      'Виктория Хирург',
+        email:     'victoria@smart-k-medi.com',
+        phone:     '+996 312 234569',
+        role:      'consultant',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+    ];
+    for (const c of consultants) await db.collection('consultants').add(c);
+    console.log(`[seed] добавлено ${consultants.length} консультантов`);
+  }
+
   console.log('[seed] готово');
 }
