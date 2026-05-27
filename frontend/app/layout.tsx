@@ -4,7 +4,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import Header from '@/components/Header';
 
-import Footer from '@/components/Footer';
+import FooterWrapper from '@/components/FooterWrapper';
 
 import { Inter } from 'next/font/google';
 
@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <main className="flex-1">{children}</main>
         </AuthProvider>
-          <Footer />
+          <FooterWrapper />
       </body>
     </html>
   );

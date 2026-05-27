@@ -11,16 +11,18 @@ export default function HospitalsPage() {
             <div className="max-w-[1440px] mx-auto px-[clamp(16px,5vw,80px)] py-12 md:py-16">
 
                 {/* Заголовок */}
-                <div className="mb-10 md:mb-14">
-                    <h1 className="text-h1-hospital mb-3">
+                <div className="max-w-[1440px] mx-auto">
+                    <div className="mb-10 md:mb-14 flex flex-col items-center text-center">
+                        <h1 className="text-h1 mb-3 ">
                         <span style={{ color: 'black' }}>Наши </span>
-                        <span style={{ color: '#3D616D' }}>партнерские больницы</span>
-                    </h1>
-                    <p className="text-body-accent max-w-[620px]" style={{ color: '#3D616D', opacity: 0.7 }}>
-                        Мы сотрудничаем исключительно с ведущими медицинскими учреждениями,
-                        имеющими международную аккредитацию, чтобы гарантировать высочайший
-                        уровень обслуживания и безопасности.
-                    </p>
+                            <span style={{ color: '#3D616D' }}>партнерские больницы</span>
+                        </h1>
+                        <p className="ext-body-accent max-w-[720px] mx-auto" style={{ color: '#3D616D', opacity: 0.7 }}>
+                            Мы сотрудничаем исключительно с ведущими медицинскими учреждениями,
+                            имеющими международную аккредитацию, чтобы гарантировать высочайший
+                            уровень обслуживания и безопасности.
+                        </p>
+                    </div>
                 </div>
 
                 {/* Скелетон */}

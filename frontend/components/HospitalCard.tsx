@@ -63,7 +63,7 @@ export default function HospitalCard({ hospital }: Props) {
             </div>
 
             {/* Фото */}
-            <div className="relative w-full md:w-[420px] h-[220px] md:h-auto shrink-0 order-first md:order-last">
+            <div className="relative w-full md:w-[420px] h-[220px] md:h-auto shrink-0 order-first md:order-last overflow-hidden">
                 {hospital.logoUrl ? (
                     <img
                         src={hospital.logoUrl}
@@ -74,10 +74,15 @@ export default function HospitalCard({ hospital }: Props) {
                     /* Заглушка если нет фото */
                     <div className="w-full h-full" style={{ backgroundColor: '#DAE3E8' }} />
                 )}
-                {/* Градиент для мобилки */}
+
+                {/* Универсальный градиент: на мобилках снизу вверх, на десктопе слева направо */}
                 <div
-                    className="absolute inset-0 md:hidden"
-                    style={{ background: 'linear-gradient(to top, white 0%, transparent 60%)' }}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background: 'linear-gradient(to top, #ffffff 0%, transparent 50%), linear-gradient(to right, #ffffff 0%, transparent 40%)'
+                    }}
+                    // Для чистого Tailwind без инлайн-стилей можно использовать классы:
+                    // className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-white via-white/50 to-transparent pointer-events-none"
                 />
             </div>
 
