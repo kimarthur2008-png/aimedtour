@@ -126,7 +126,7 @@ export default function HomePage() {
             <p className="text-caption mb-4 text-accent">
               Почему стоит выбрать нас?
             </p>
-            <h2 className="text-h2-accent leading-tight mb-4 text-primary-dark">
+            <h2 className="text-h2-accent leading-tight mb-4 text-[#425D54]">
               Ваш Путь К Здоровью,<br />
               Идеально Организованный
             </h2>
