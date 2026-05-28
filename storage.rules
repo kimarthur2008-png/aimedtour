@@ -1,0 +1,33 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Публичное чтение всех файлов (изображения больниц, кейсов, туризма)
+    match /{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Загрузка только для авторизованных пользователей с ролью admin или consultant
+    // Макс. 5 МБ, только изображения
+    match /hospitals/{fileName} {
+      allow write: if request.auth != null
+                   && request.auth.token.role in ['admin', 'consultant']
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /cases/{fileName} {
+      allow write: if request.auth != null
+                   && request.auth.token.role in ['admin', 'consultant']
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /tourism/{fileName} {
+      allow write: if request.auth != null
+                   && request.auth.token.role in ['admin', 'consultant']
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

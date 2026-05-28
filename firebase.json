@@ -9,5 +9,11 @@
   },
   "functions": {
     "source": "backend/functions"
+  },
+  "firestore": {
+    "rules": "backend/firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

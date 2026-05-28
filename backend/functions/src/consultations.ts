@@ -5,7 +5,9 @@
 
 import * as admin from 'firebase-admin';
 
-const db = admin.firestore();
+function getDb() {
+  return admin.firestore();
+}
 
 export type ConsultationStatus = 'new' | 'in-progress' | 'done';
 
@@ -28,7 +30,7 @@ export async function changeConsultationStatus(id: string, newStatus: Consultati
   if (!allowed.includes(newStatus)) {
     throw new Error(`Недопустимый статус: ${newStatus}`);
   }
-  await db.collection('consultations').doc(id).update({ status: newStatus });
+  await getDb().collection('consultations').doc(id).update({ status: newStatus });
 }
 
 // ── Найти консультанта с минимальной нагрузкой ───────────────────────────────
@@ -39,8 +41,7 @@ export async function findLeastLoadedConsultant(
   ticketsCollection: string,
   assignedField: string
 ): Promise<string | null> {
-  // Берём пользователей с ролью consultant из /users
-  const usersSnap = await db.collection('users')
+  const usersSnap = await getDb().collection('users')
     .where('role', '==', 'consultant')
     .get();
 
@@ -48,9 +49,9 @@ export async function findLeastLoadedConsultant(
 
   const consultantUids = usersSnap.docs.map((d) => d.id);
 
-  // Считаем открытые тикеты каждого консультанта
-  const openSnap = await db.collection(ticketsCollection)
-    .where('status', '==', 'open')
+  // Считаем незакрытые тикеты каждого консультанта
+  const openSnap = await getDb().collection(ticketsCollection)
+    .where('status', 'in', ['new', 'in-progress', 'open'])
     .get();
 
   const load: Record<string, number> = {};

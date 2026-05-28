@@ -15,14 +15,15 @@
  */
 
 import * as functions from 'firebase-functions/v2';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin     from 'firebase-admin';
 import * as sgMail    from '@sendgrid/mail';
-import { seedIfEmpty } from '../../scripts/seed';
+import { seedIfEmpty } from './seed';
 import { findLeastLoadedConsultant } from './consultations';
 
 admin.initializeApp();
 
-const MANAGER_EMAIL = 'менеджер@smart-k-medi.com';
+const MANAGER_EMAIL = 'tendai401@naver.com';
 const FROM_EMAIL    = 'noreply@smart-k-medi.com';
 
 
@@ -41,6 +42,31 @@ function escapeHtml(str: string | undefined | null): string {
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;')
     .replace(/'/g,  '&#039;');
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Авто-назначение координатора на заявку по ID
+// ════════════════════════════════════════════════════════════════════════════
+async function assignCoordinator(consultationId: string) {
+  const db = admin.firestore();
+
+  const coordinatorId = await findLeastLoadedConsultant('consultations', 'coordinatorId');
+  if (!coordinatorId) {
+    console.warn(`[BE-ASSIGN] Нет координаторов — заявка ${consultationId} не назначена`);
+    return;
+  }
+
+  const userDoc = await db.collection('users').doc(coordinatorId).get();
+  const coordinatorData = userDoc.exists ? (userDoc.data() ?? {}) : {};
+
+  await db.collection('consultations').doc(consultationId).update({
+    coordinatorId,
+    coordinatorName: coordinatorData['name'] ?? coordinatorData['fullName'] ?? '',
+    updatedAt: new Date().toISOString(),
+  });
+
+  console.log(`[BE-ASSIGN] Заявка ${consultationId} → координатор ${coordinatorId}`);
 }
 
 
@@ -84,7 +110,7 @@ export const setUserRole = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'uid обязателен и должен быть строкой');
   }
 
-  const ALLOWED_ROLES = ['user', 'coordinator', 'admin'];
+  const ALLOWED_ROLES = ['user', 'coordinator', 'consultant', 'admin'];
   if (!ALLOWED_ROLES.includes(role)) {
     throw new HttpsError(
       'invalid-argument',
@@ -135,13 +161,14 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
 
     // ── Шаг 2: отправляем email менеджеру ───────────────────────────────────
     // Экранируем все поля — защита от XSS в HTML письме
-    const name    = escapeHtml(data.name);
-    const email   = escapeHtml(data.email);
-    const phone   = escapeHtml(data.phone);
-    const country = escapeHtml(data.country);
-    const disease = escapeHtml(data.disease);
-    const message = escapeHtml(data.message);
-    const id      = escapeHtml(docId);
+    const name      = escapeHtml(data.name);
+    const email     = escapeHtml(data.email);
+    const rawEmail  = data.email || '';
+    const phone     = escapeHtml(data.phone);
+    const country   = escapeHtml(data.country);
+    const disease   = escapeHtml(data.disease);
+    const message   = escapeHtml(data.message);
+    const id        = escapeHtml(docId);
 
     const htmlBody = `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -151,7 +178,7 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
         <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
           <table style="width:100%;border-collapse:collapse">
             <tr><td style="padding:8px 0;color:#64748b;width:120px">Имя</td>      <td style="padding:8px 0;font-weight:600">${name}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Email</td>     <td style="padding:8px 0"><a href="mailto:${email}">${email}</a></td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Email</td>     <td style="padding:8px 0"><a href="mailto:${rawEmail}">${email}</a></td></tr>
             <tr><td style="padding:8px 0;color:#64748b">Телефон</td>   <td style="padding:8px 0">${phone}</td></tr>
             <tr><td style="padding:8px 0;color:#64748b">Страна</td>    <td style="padding:8px 0">${country}</td></tr>
             <tr><td style="padding:8px 0;color:#64748b">Болезнь</td>   <td style="padding:8px 0">${disease}</td></tr>
@@ -218,7 +245,11 @@ export const onNewSupportTicket = functions.firestore.onDocumentCreated(
 
     const db = admin.firestore();
 
-    // Находим наименее загруженного консультанта
+    const topic     = escapeHtml(data['topic']);
+    const userName  = escapeHtml(data['userName']);
+    const userEmail = escapeHtml(data['userEmail']);
+    const desc      = escapeHtml(data['description']);
+
     const consultantId = await findLeastLoadedConsultant('supportTickets', 'consultantId');
     if (!consultantId) {
       console.warn(`[ASSIGN] Нет консультантов в коллекции — тикет ${ticketId} не назначен`);
@@ -249,9 +280,9 @@ export const onNewSupportTicket = functions.firestore.onDocumentCreated(
           <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
             <p>Вам назначен новый тикет поддержки.</p>
             <table style="width:100%;border-collapse:collapse">
-              <tr><td style="padding:6px 0;color:#64748b;width:120px">Тема</td><td style="font-weight:600">${data['topic'] ?? '—'}</td></tr>
-              <tr><td style="padding:6px 0;color:#64748b">Пациент</td><td>${data['userName'] ?? '—'} (${data['userEmail'] ?? '—'})</td></tr>
-              <tr><td style="padding:6px 0;color:#64748b">Описание</td><td>${data['description'] ?? '—'}</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b;width:120px">Тема</td><td style="font-weight:600">${topic}</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b">Пациент</td><td>${userName} (${userEmail})</td></tr>
+              <tr><td style="padding:6px 0;color:#64748b">Описание</td><td>${desc}</td></tr>
             </table>
           </div>
         </div>`;
@@ -259,13 +290,87 @@ export const onNewSupportTicket = functions.firestore.onDocumentCreated(
         to:      consultantEmail,
         from:    FROM_EMAIL,
         subject: `Новый тикет: ${data['topic'] ?? ticketId}`,
-        text:    `Вам назначен тикет: ${data['topic']}\nПациент: ${data['userName']}\n${data['description']}`,
+        text:    `Вам назначен тикет: ${data['topic'] ?? '—'}\nПациент: ${data['userName'] ?? '—'}\n${data['description'] ?? '—'}`,
         html,
       });
       console.log(`[ASSIGN] Email отправлен ${consultantEmail}`);
     }
   }
 );
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BE-STATUS — Смена статуса заявки + email пациенту
+//  Вызывается из Admin Dashboard: updateConsultationStatus({ id, status })
+// ════════════════════════════════════════════════════════════════════════════
+export const updateConsultationStatus = onCall(async (request) => {
+  const role = request.auth?.token.role;
+  if (!role || !['admin', 'consultant', 'coordinator'].includes(role)) {
+    throw new HttpsError('permission-denied', 'Недостаточно прав для смены статуса');
+  }
+
+  const { id, status } = request.data as { id: string; status: string };
+
+  if (!id || typeof id !== 'string') {
+    throw new HttpsError('invalid-argument', 'id заявки обязателен');
+  }
+
+  const ALLOWED_STATUSES = ['new', 'in-progress', 'done'];
+  if (!ALLOWED_STATUSES.includes(status)) {
+    throw new HttpsError('invalid-argument', `Недопустимый статус: "${status}"`);
+  }
+
+  const db = admin.firestore();
+  const docRef = db.collection('consultations').doc(id);
+  const snap = await docRef.get();
+
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Заявка не найдена');
+  }
+
+  const prev = snap.data()!;
+  await docRef.update({
+    status,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy: request.auth!.uid,
+  });
+
+  console.log(`[BE-STATUS] Заявка ${id}: ${prev.status} → ${status}`);
+
+  // Email пациенту при смене на done
+  if (status === 'done' && prev.email) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+
+    const patientName = escapeHtml(prev.name);
+    const html = `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
+        <div style="background:#059669;padding:20px 24px;border-radius:12px 12px 0 0">
+          <h2 style="color:#fff;margin:0">Smart K-Medi — Ваша заявка обработана</h2>
+        </div>
+        <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
+          <p>Здравствуйте, ${patientName}!</p>
+          <p>Ваша заявка на консультацию была обработана. Наш координатор свяжется с вами
+             в ближайшее время для уточнения деталей.</p>
+          <p style="color:#64748b;font-size:13px">ID заявки: <code>${escapeHtml(id)}</code></p>
+        </div>
+      </div>`;
+
+    await sgMail.send({
+      to:      prev.email,
+      from:    FROM_EMAIL,
+      subject: `Smart K-Medi — Ваша заявка обработана`,
+      text:    `Здравствуйте, ${prev.name || 'пациент'}! Ваша заявка на консультацию была обработана. Наш координатор свяжется с вами.`,
+      html,
+    }).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[BE-STATUS] Не удалось отправить email пациенту: ${msg}`);
+    });
+
+    console.log(`[BE-STATUS] Email отправлен пациенту ${prev.email}`);
+  }
+
+  return { success: true };
+});
+
 
 // ════════════════════════════════════════════════════════════════════════════
 //  BE-SEED — Заполнение Firestore тестовыми данными
