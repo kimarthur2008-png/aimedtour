@@ -5,12 +5,10 @@ service cloud.firestore {
     // ── Helpers ──────────────────────────────────────────────────────────────
     function isAuth()  { return request.auth != null; }
     function isAdmin() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuth() && request.auth.token.role == 'admin';
     }
     function isConsultant() {
-      return isAuth() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'consultant';
+      return isAuth() && request.auth.token.role == 'consultant';
     }
 
     // ── Публичный контент (только чтение) ────────────────────────────────────
