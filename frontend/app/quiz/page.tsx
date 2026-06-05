@@ -19,35 +19,35 @@ export default function QuizPage() {
 
     const loading = authLoading || hospitalsLoading;
 
-    // if (!authLoading && !profile) {
-    //     return (
-    //         <div className="min-h-page flex items-center justify-center px-4"
-    //              style={{ background: '#C0CEB9' }}>
-    //             <div className="bg-white rounded-2xl shadow-sm p-10 max-w-md w-full text-center">
-    //                 <img src="/icons/passwordauth.svg" alt="Lock Icon" className="w-12 h-12 mx-auto my-4" />
-    //                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Войдите в аккаунт</h1>
-    //                 <p className="text-gray-500 text-sm mb-8">
-    //                     Чтобы пройти опросник и получить персональные рекомендации клиник,
-    //                     необходимо войти или создать аккаунт.
-    //                 </p>
-    //                 <div className="flex gap-3 justify-center">
-    //                     <Link
-    //                         href="/auth?tab=login"
-    //                         className="px-6 py-2.5 rounded-xl bg-[#628473] text-white text-sm font-medium hover:bg-[#628473]/85 transition-colors transition-transform active:scale-95 touch-manipulation"
-    //                     >
-    //                         Войти
-    //                     </Link>
-    //                     <Link
-    //                         href="/auth?tab=register"
-    //                         className="px-6 py-2.5 rounded-xl border border-[#628473] text-sm font-medium text-[#628473] hover:bg-[#628473]/10 transition-colors transition-transform active:scale-95 touch-manipulation"
-    //                     >
-    //                         Зарегистрироваться
-    //                     </Link>
-    //                 </div>
-    //             </div>
-    //         </div>
-    //     );
-    // }
+    if (!authLoading && !profile) {
+        return (
+            <div className="min-h-page flex items-center justify-center px-4"
+                 style={{ background: '#C0CEB9' }}>
+                <div className="bg-white rounded-2xl shadow-sm p-10 max-w-md w-full text-center">
+                    <img src="/icons/passwordauth.svg" alt="Lock Icon" className="w-12 h-12 mx-auto my-4" />
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Войдите в аккаунт</h1>
+                    <p className="text-gray-500 text-sm mb-8">
+                        Чтобы пройти опросник и получить персональные рекомендации клиник,
+                        необходимо войти или создать аккаунт.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                        <Link
+                            href="/auth?tab=login"
+                            className="px-6 py-2.5 rounded-xl bg-[#628473] text-white text-sm font-medium hover:bg-[#628473]/85 transition-colors transition-transform active:scale-95 touch-manipulation"
+                        >
+                            Войти
+                        </Link>
+                        <Link
+                            href="/auth?tab=register"
+                            className="px-6 py-2.5 rounded-xl border border-[#628473] text-sm font-medium text-[#628473] hover:bg-[#628473]/10 transition-colors transition-transform active:scale-95 touch-manipulation"
+                        >
+                            Зарегистрироваться
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

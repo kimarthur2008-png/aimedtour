@@ -8,6 +8,66 @@ import { doc, updateDoc, collection, query, where, orderBy, limit, getDocs } fro
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import Select, { components } from 'react-select';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import DateInputDMY from '@/components/DateInputDMY';
+import countries from 'i18n-iso-countries';
+import ru from 'i18n-iso-countries/langs/ru.json';
+import en from 'i18n-iso-countries/langs/en.json';
+import ko from 'i18n-iso-countries/langs/ko.json';
+
+countries.registerLocale(ru);
+countries.registerLocale(en);
+countries.registerLocale(ko);
+
+const countryOptionsByLang = {
+  RU: Object.entries(countries.getNames('ru')).map(([code, name]) => ({ value: code, label: name as string })),
+  EN: Object.entries(countries.getNames('en')).map(([code, name]) => ({ value: code, label: name as string })),
+  KO: Object.entries(countries.getNames('ko')).map(([code, name]) => ({ value: code, label: name as string })),
+};
+
+const CountryValueContainer = ({ children, ...props }: any) => (
+  <components.ValueContainer {...props}>
+    <img src="/icons/countryauth.svg" className="w-4 h-4 shrink-0 mr-2" />
+    {children}
+  </components.ValueContainer>
+);
+
+const selectStyles = {
+  control: (base: any) => ({
+    ...base,
+    border: '1px solid #DAE3E8',
+    borderRadius: '12px',
+    padding: '0 4px 0 8px',
+    boxShadow: 'none',
+    backgroundColor: 'transparent',
+    minHeight: '38px',
+    fontSize: '14px',
+    color: '#21393B',
+    '&:hover': { borderColor: '#DAE3E8' },
+  }),
+  valueContainer: (base: any) => ({ ...base, display: 'flex', alignItems: 'center', padding: '0 0 0 2px' }),
+  menu: (base: any) => ({
+    ...base,
+    borderRadius: '12px',
+    border: '1px solid #DAE3E8',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+    overflow: 'hidden',
+    fontSize: '13px',
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isFocused ? 'rgba(76,109,124,0.1)' : 'white',
+    color: '#21393B',
+    cursor: 'pointer',
+  }),
+  placeholder: (base: any) => ({ ...base, color: '#21393B', opacity: 0.4 }),
+  singleValue:  (base: any) => ({ ...base, color: '#21393B' }),
+  input:        (base: any) => ({ ...base, color: '#21393B' }),
+  indicatorSeparator: () => ({ display: 'none' }),
+  dropdownIndicator: (base: any) => ({ ...base, color: 'rgba(33,57,59,0.4)', padding: '0 4px' }),
+};
 
 const STAGE_ICONS = [
   (
@@ -66,7 +126,8 @@ function stageFromStatus(status: string): number {
 export default function ProfilePage() {
   const { user, profile, role, loading, refreshProfile } = useAuth();
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const countryOptions = countryOptionsByLang[lang];
 
   const STAGES = t.profile.stageLabels.map((label, i) => ({
     label,
@@ -82,7 +143,6 @@ export default function ProfilePage() {
   const [saveError, setSaveError] = useState('');
   const [editFullName,  setEditFullName]  = useState('');
   const [editCountry,   setEditCountry]   = useState('');
-  const [editCity,      setEditCity]      = useState('');
   const [editPhone,     setEditPhone]     = useState('');
   const [editBirthDate, setEditBirthDate] = useState('');
 
@@ -130,7 +190,6 @@ export default function ProfilePage() {
   function startEdit() {
     setEditFullName(profile?.fullName  ?? '');
     setEditCountry(profile?.country    ?? '');
-    setEditCity(profile?.city          ?? '');
     setEditPhone(profile?.phone        ?? '');
     setEditBirthDate(profile?.birthDate ?? '');
     setSaveError('');
@@ -144,7 +203,7 @@ export default function ProfilePage() {
       await updateDoc(doc(db, 'users', user.uid), {
         fullName:  editFullName,
         country:   editCountry,
-        city:      editCity,
+
         phone:     editPhone,
         birthDate: editBirthDate,
       });
@@ -311,23 +370,76 @@ export default function ProfilePage() {
             ) : (
               <div className="bg-white rounded-2xl p-5 flex flex-col gap-3">
                 <p className="font-semibold text-sm" style={{ color: '#21393B' }}>{t.profile.editingProfile}</p>
-                {[
-                  { label: t.profile.fullName,  value: editFullName,  set: setEditFullName },
-                  { label: t.profile.country,   value: editCountry,   set: setEditCountry },
-                  { label: t.profile.city,      value: editCity,      set: setEditCity },
-                  { label: t.profile.phone,     value: editPhone,     set: setEditPhone },
-                  { label: t.profile.birthDate, value: editBirthDate, set: setEditBirthDate },
-                ].map(({ label, value, set }) => (
-                  <div key={label}>
-                    <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{label}</label>
-                    <input
-                      value={value}
-                      onChange={(e) => set(e.target.value)}
-                      className="w-full rounded-xl px-3 py-2 text-sm border focus:outline-none"
-                      style={{ borderColor: '#DAE3E8', color: '#21393B' }}
-                    />
-                  </div>
-                ))}
+                <div>
+                  <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{t.profile.fullName}</label>
+                  <input
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2 text-sm border focus:outline-none"
+                    style={{ borderColor: '#DAE3E8', color: '#21393B' }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{t.profile.country}</label>
+                  <Select
+                    instanceId="profile-country"
+                    options={countryOptions}
+                    placeholder={t.auth.countryPh}
+                    components={{ ValueContainer: CountryValueContainer }}
+                    value={countryOptions.find(o => o.label === editCountry) ?? null}
+                    onChange={(opt) => setEditCountry(opt?.label ?? '')}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    menuPosition="fixed"
+                    styles={{ ...selectStyles, menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{t.profile.phone}</label>
+                  <PhoneInput
+                    value={editPhone}
+                    onChange={(value) => setEditPhone('+' + value)}
+                    inputStyle={{
+                      width: '100%',
+                      border: '1.5px solid #DAE3E8',
+                      borderRadius: '16px',
+                      padding: '14px 14px 14px 62px',
+                      fontSize: '14px',
+                      color: '#21393B',
+                      backgroundColor: 'transparent',
+                      outline: 'none',
+                      boxShadow: 'none',
+                      height: '42px',
+                    }}
+                    buttonStyle={{
+                      border: 'none',
+                      borderRight: '1.5px solid #DAE3E8',
+                      borderRadius: '16px 0 0 16px',
+                      backgroundColor: 'transparent',
+                      padding: '0 8px',
+                    }}
+                    dropdownStyle={{
+                      borderRadius: '16px',
+                      border: '1.5px solid #DAE3E8',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                      color: '#21393B',
+                      fontSize: '13px',
+                    }}
+                    searchStyle={{
+                      borderRadius: '8px',
+                      border: '1.5px solid #DAE3E8',
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      color: '#21393B',
+                      width: '90%',
+                    }}
+                    enableSearch
+                    searchPlaceholder={t.auth.phoneSearch}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{t.profile.birthDate}</label>
+                  <DateInputDMY value={editBirthDate} onChange={setEditBirthDate} />
+                </div>
                 {saveError && <p className="text-xs text-red-500">{saveError}</p>}
                 <div className="flex gap-2">
                   <button

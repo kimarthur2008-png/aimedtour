@@ -13,7 +13,7 @@ export default function HospitalPage({ params }: { params: Promise<{ id: string 
     if (loading) {
         return (
             <div style={{ backgroundColor: '#C7D4D8', minHeight: '100vh' }}>
-                <div className="max-w-[1440px] mx-auto px-[clamp(16px,5vw,80px)] py-12">
+                <div className="max-w-360 mx-auto px-[clamp(16px,5vw,80px)] py-12">
                     <div className="h-8 w-48 rounded-xl bg-white/40 animate-pulse mb-8" />
                     <div className="bg-white rounded-3xl h-[400px] animate-pulse" />
                 </div>
