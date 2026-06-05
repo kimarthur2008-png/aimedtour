@@ -1,8 +1,19 @@
+'use client';
+
 import ValueCard from '@/components/about/ValueCard';
 import TeamMember from '@/components/about/TeamMember';
-import { ABOUT_HERO, ABOUT_TEAM, ABOUT_VALUES } from '@/lib/aboutData';
+import { ABOUT_TEAM } from '@/lib/aboutData';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function AboutPage() {
+  const { t } = useLanguage();
+
+  const ABOUT_VALUES = [
+    { title: t.about.v1Title, description: t.about.v1Desc, icon: 'shield' as const },
+    { title: t.about.v2Title, description: t.about.v2Desc, icon: 'care'   as const },
+    { title: t.about.v3Title, description: t.about.v3Desc, icon: 'transparency' as const },
+  ];
+
   return (
     <div className="flex flex-col bg-[#C7D4D8] lg:bg-transparent">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
@@ -12,52 +23,36 @@ export default function AboutPage() {
             <div className="flex flex-col gap-6 lg:flex-1 lg:max-w-[75%]">
               <h1 className="text-h1 leading-tight">
                 <span className="block" style={{ color: '#F7FAE8' }}>
-                  {ABOUT_HERO.titleLine1}
+                  {t.about.heroTitleLine1}
                 </span>
                 <span className="block" style={{ color: '#46707E' }}>
-                  {ABOUT_HERO.titleLine2}
+                  {t.about.heroTitleLine2}
                 </span>
               </h1>
 
-              {ABOUT_HERO.paragraphs.map((p, i) => (
-                <p key={i} className="text-body text-primary-dark/85">
-                  {p}
-                </p>
-              ))}
+              <p className="text-body text-primary-dark/85">{t.about.heroP1}</p>
+              <p className="text-body text-primary-dark/85">{t.about.heroP2}</p>
 
               <div className="flex gap-3 mt-2 items-center">
-                <div
-                  className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0"
-                >
-                  <img
-                      src={"/icons/licence.svg"}
-                      alt=""
-                      className="h-auto w-auto"
-                  />
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0">
+                  <img src="/icons/licence.svg" alt="" className="h-auto w-auto" />
                 </div>
-
                 <p className="text-caption">
                   <span className="block" style={{ color: '#F7FAE8', opacity: 0.8 }}>
-                    {ABOUT_HERO.licenseLine1}
+                    {t.about.heroLicense1}
                   </span>
                   <span className="block" style={{ color: '#46707E', opacity: 0.8 }}>
-                    {ABOUT_HERO.licenseLine2}
+                    {t.about.heroLicense2}
                   </span>
                 </p>
-
               </div>
             </div>
 
             <div className="flex justify-center w-full lg:flex-1 lg:justify-end">
               <div className="bg-white rounded-2xl p-6 md:p-10 w-full max-w-[480px] shadow-sm">
-                <img
-                  src="/images/about/doctor.svg"
-                  alt=""
-                  className="w-full h-auto mx-auto"
-                />
+                <img src="/images/about/doctor.svg" alt="" className="w-full h-auto mx-auto" />
               </div>
             </div>
-
           </div>
         </div>
       </section>
@@ -69,7 +64,7 @@ export default function AboutPage() {
             className="text-h2-accent text-center mb-10 md:mb-14"
             style={{ color: '#46888D' }}
           >
-            Наши основные ценности
+            {t.about.valuesHeading}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
@@ -87,7 +82,7 @@ export default function AboutPage() {
             className="text-h2-accent text-center mb-10 md:mb-14"
             style={{ color: '#21393B' }}
           >
-            Руководящая команда
+            {t.about.teamHeading}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 md:gap-12">

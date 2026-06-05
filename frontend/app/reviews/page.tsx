@@ -2,9 +2,11 @@
 
 import { useCases } from '@/hooks/useCases';
 import ReviewCard from '@/components/ReviewCard';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function ReviewsPage() {
   const { cases, loading, error } = useCases();
+  const { t } = useLanguage();
 
   return (
     <div style={{ backgroundColor: '#C7D4D8', minHeight: '100vh' }}>
@@ -12,15 +14,11 @@ export default function ReviewsPage() {
 
         {/* Заголовок */}
         <div className="mb-10 md:mb-14 max-w-[1440px]">
-          <h1 className="text-h1 mb-4 text-center">
-            <span style={{ color: '#46888D' }}>Истории Успешного</span>
-            <span style={{ color: '#6B8B80' }}> Лечения Пациентов</span>
+          <h1 className="text-h1 mb-4 text-center" style={{ color: '#46888D' }}>
+            {t.reviews.title}
           </h1>
           <p className="text-body-accent text-center" style={{ color: '#3D616D', opacity: 0.75 }}>
-            Ознакомьтесь с реальными результатами пациентов со всего мира, которые
-            доверили нам свою медицинскую поездку в Южную Корею. Эти истории
-            демонстрируют нашу приверженность качеству, безопасности и
-            индивидуальному подходу.
+            {t.reviews.subtitle}
           </p>
         </div>
 
@@ -51,7 +49,7 @@ export default function ReviewsPage() {
 
         {!loading && !error && cases.length === 0 && (
           <p className="text-body" style={{ color: '#3D616D', opacity: 0.7 }}>
-            Отзывы скоро появятся.
+            {t.reviews.comingSoon}
           </p>
         )}
 

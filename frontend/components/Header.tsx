@@ -3,24 +3,30 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
+import type { Lang } from '@/lib/i18n';
 
-const NAV = [
-  { label: 'Главная',              href: '/',          width: 'w-[100px]' },
-  { label: 'Отзывы пациентов',     href: '/reviews',   width: 'w-[120px]' },
-  { label: 'Партнерские больницы', href: '/hospitals', width: 'w-[130px]' },
-  { label: 'Туризм и путешествия', href: '/trip',      width: 'w-[130px]' },
-  { label: 'О нас',                href: '/about',     width: 'w-[70px]'  },
+const LANGS: { code: Lang; label: string; flag: string }[] = [
+  { code: 'RU', label: 'Русский', flag: '/icons/flags/rus.png' },
+  { code: 'EN', label: 'English', flag: '/icons/flags/en.png' },
+  { code: 'KO', label: '한국어',  flag: '/icons/flags/kor.png' },
 ];
 
 export default function Header() {
-  const { user }  = useAuth();
+  const { profile }  = useAuth();
   const pathname  = usePathname();
+  const { lang, setLang, t } = useLanguage();
+
+  const NAV = [
+    { label: t.nav.home,      href: '/',          width: 'w-[100px]', icon: '/icons/homemob.svg'},
+    { label: t.nav.reviews,   href: '/reviews',   width: 'w-[120px]', icon: '/icons/reviewsmob.svg'},
+    { label: t.nav.hospitals, href: '/hospitals', width: 'w-[130px]', icon: '/icons/hospitalsmob.svg'},
+    { label: t.nav.trip,      href: '/trip',      width: 'w-[130px]', icon: '/icons/mapmob.svg'},
+    { label: t.nav.about,     href: '/about',     width: 'w-[70px]',  icon: '/icons/abtmob.svg'},
+  ];
 
   const [langOpen,   setLangOpen]   = useState(false);
-  const [lang,       setLang]       = useState('RU');
   const [mobileOpen, setMobileOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +91,7 @@ export default function Header() {
 
                 {langOpen && (
                     <div className="absolute top-9 left-0 bg-white border border-gray-100 rounded-xl shadow-md py-1 z-50 min-w-[80px]">
-                      {['RU', 'EN', 'KO'].map((l) => (
+                      {(['RU', 'EN', 'KO'] as Lang[]).map((l) => (
                           <button
                               key={l}
                               onClick={() => { setLang(l); setLangOpen(false); }}
@@ -99,34 +105,30 @@ export default function Header() {
                 )}
               </div>
 
-              {user ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-[#21393B] hidden sm:block">
-                      {user.displayName || user.email?.split('@')[0]}
-                    </span>
-
-                    <button
-                        onClick={() => signOut(auth)}
-                        className="px-4 py-2 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
-                    >
-                      Выйти
-                    </button>
-                  </div>
+              {profile ? (
+                  <Link
+                      href="/profile"
+                      className="flex items-center gap-2 px-3 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] hover:bg-[#DAE3E8]/50 transition-colors"
+                  >
+                    <img src="/icons/nameauth.svg" alt="" className="h-4 w-4" />
+                    <span className="hidden sm:block">{profile.fullName || profile.nick}</span>
+                    <span className="sm:hidden">{t.header.profile}</span>
+                  </Link>
               ) : (
                   <>
                     <Link
                         href="/auth"
-                        className="flex items-center gap-[4px] px-3 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
+                        className="flex items-center gap-[4px] px-3 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] hover:bg-[#DAE3E8]/50  transition-colors"
                     >
                       <img src="/icons/sign_in.svg" alt="" className="h-4 w-4" />
-                      Войти
+                      {t.header.login}
                     </Link>
                     <Link
                         href="/auth?tab=register"
-                        className="flex items-center gap-[4px] px-4 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] transition-colors"
+                        className="flex items-center gap-[4px] px-4 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] hover:bg-[#DAE3E8]/50 transition-colors"
                     >
                       <img src="/icons/sign_up.svg" alt="" className="h-4 w-4" />
-                      Регистрация
+                      {t.header.register}
                     </Link>
                   </>
               )}
@@ -134,16 +136,16 @@ export default function Header() {
               {/* Кнопка консультации */}
               <Link
                   href="/quiz"
-                  className="flex items-center gap-2 px-4 py-1 rounded-xl border border-[#F7FAE8] bg-[#46888D] text-[#F7FAE8] text-sm font-medium hover:bg-[#5a7a6f] transition-colors whitespace-nowrap"
+                  className="flex items-center gap-2 px-4 py-1 rounded-xl border border-[#F7FAE8] bg-primary text-[#F7FAE8] text-sm font-medium hover:bg-primary/80 transition-colors whitespace-nowrap"
               >
                 <img src="/icons/Chat.svg" alt="" className="h-4 w-4" />
-                Бесплатная консультация по ИИ
+                {t.header.quizCta}
               </Link>
             </div>
 
             {/* Гамбургер — мобилка и планшет */}
             <button
-                className="lg:hidden ml-auto flex flex-col justify-center gap-[5px] p-2"
+                className="lg:hidden ml-auto flex flex-col justify-center gap-[5px] p-2 touch-manipulation"
                 onClick={() => setMobileOpen(!mobileOpen)}
                 aria-label="Меню"
             >
@@ -162,8 +164,12 @@ export default function Header() {
         </header>
 
         {/* ── Мобильное меню ──────────────────────────────────────────── */}
-        {mobileOpen && (
-            <div className="lg:hidden fixed inset-0 top-[76px] z-30 bg-white overflow-y-auto">
+        <div className={`lg:hidden fixed inset-0 top-19 z-30 bg-white overflow-y-auto
+          transition-all duration-300 ease-in-out
+          ${mobileOpen
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 -translate-y-3 pointer-events-none'
+          }`}>
               <div className="flex flex-col px-6 py-6 gap-1">
 
                 {/* Навигация */}
@@ -179,7 +185,7 @@ export default function Header() {
                         }`}
                     >
                       {/* ИКОНКА: <img src="/icons/nav/....svg" className="h-5 w-5" /> */}
-                      <div className="h-5 w-5 rounded bg-gray-200 shrink-0" />
+                      <img src={n.icon} alt="" className="h-5 w-5 shrink-0" />
                       {n.label}
                     </Link>
                 ))}
@@ -189,11 +195,7 @@ export default function Header() {
                 {/* Выбор языка */}
                 <p className="text-[13px] font-medium text-[#21393B] px-3 mb-2">Язык</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { code: 'RU', label: 'Русский' },
-                    { code: 'EN', label: 'English' },
-                    { code: 'KO', label: '한국어'   },
-                  ].map((l) => (
+                  {LANGS.map((l) => (
                       <button
                           key={l.code}
                           onClick={() => setLang(l.code)}
@@ -203,8 +205,7 @@ export default function Header() {
                               : 'border-gray-100 bg-gray-50 text-[#21393B]'
                           }`}
                       >
-                        {/* ФЛАГ: <img src={`/icons/flags/${l.code.toLowerCase()}.svg`} className="h-4 w-5 rounded-sm" /> */}
-                        <div className="h-4 w-5 rounded-sm bg-gray-300 shrink-0" />
+                        <img src={l.flag} className="h-4 w-5 rounded-sm" />
                         {l.label}
                       </button>
                   ))}
@@ -212,22 +213,24 @@ export default function Header() {
 
                 <div className="h-px bg-gray-100 my-3" />
 
-                {/* Войти / Выйти */}
-                {user ? (
-                    <button
-                        onClick={() => signOut(auth)}
-                        className="flex items-center gap-3 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
+                {/* Профиль / Войти */}
+                {profile ? (
+                    <Link
+                        href="/profile"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-4 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
                     >
-                      Выйти
-                    </button>
+                      <img src="/icons/nameauth.svg" alt="" className="h-5 w-5 shrink-0" />
+                      {profile.fullName || profile.nick || t.header.profile}
+                    </Link>
                 ) : (
                     <Link
                         href="/auth"
                         onClick={() => setMobileOpen(false)}
                         className="flex items-center gap-4 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
                     >
-                      <div className="h-5 w-5 rounded bg-gray-200 shrink-0" />
-                      Войти
+                      <img src="/icons/sign_in.svg" alt="" className="h-5 w-5 shrink-0" />
+                      {t.header.login}
                     </Link>
                 )}
 
@@ -236,14 +239,13 @@ export default function Header() {
                     href="/quiz"
                     onClick={() => setMobileOpen(false)}
                     className="mt-3 w-full py-4 rounded-2xl text-center text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: '#21393B' }}
+                    style={{ backgroundColor: 'var(--color-primary)' }}
                 >
-                  Бесплатная консультация ИИ
+                  {t.header.quizCta}
                 </Link>
 
               </div>
             </div>
-        )}
       </>
   );
 }

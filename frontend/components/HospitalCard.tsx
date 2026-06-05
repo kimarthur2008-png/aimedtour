@@ -8,7 +8,7 @@ interface Props {
 export default function HospitalCard({ hospital }: Props) {
     return (
         <div
-            className="bg-white rounded-2xl overflow-hidden flex flex-col md:flex-row"
+            className="animate-slide-up bg-white rounded-2xl overflow-hidden flex flex-col md:flex-row"
             style={{ border: '1px solid rgba(0,0,0,0.06)', minHeight: '260px' }}
         >
             {/* Текстовая часть */}
@@ -21,6 +21,26 @@ export default function HospitalCard({ hospital }: Props) {
                         {hospital.description}
                     </p>
                 </div>
+
+                {/* Сертификаты */}
+                {hospital.certifications?.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {hospital.certifications.map((c) => (
+                            <span
+                                key={c}
+                                className="text-caption px-3 py-1 rounded-full"
+                                style={{
+                                    backgroundColor: 'rgba(61,97,109,0.12)',
+                                    color: '#3D616D',
+                                    border: '1px solid rgba(61,97,109,0.25)',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                {c}
+                            </span>
+                        ))}
+                    </div>
+                )}
 
                 {/* Специализации */}
                 {hospital.specializations?.length > 0 && (
