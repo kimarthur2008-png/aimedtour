@@ -112,7 +112,6 @@ export default function AuthPage() {
     const [regEmail,   setRegEmail]   = useState('');
     const [regPass,    setRegPass]    = useState('');
     const [country,    setCountry]    = useState('');
-    const [city,       setCity]       = useState('');
     const [phone,      setPhone]      = useState('');
     const [birthDate,  setBirthDate]  = useState('');
     const [nickError,  setNickError]  = useState('');
@@ -121,7 +120,7 @@ export default function AuthPage() {
         setError(''); setInfo(''); setNickError('');
         setNick(''); setPass(''); setEmail(''); setEmailPass(''); setResetEmail('');
         setRegNick(''); setFullName(''); setRegEmail(''); setRegPass('');
-        setCountry(''); setCity(''); setPhone(''); setBirthDate('');
+        setCountry(''); setPhone(''); setBirthDate('');
     }
     // Синхронизация URL → mode (при переходе через хедер)
     useEffect(() => {
@@ -206,7 +205,7 @@ export default function AuthPage() {
             await updateProfile(cred.user, { displayName: fullName });
             await setDoc(doc(db, 'users', cred.user.uid), {
                 nick: regNick.toLowerCase(), email: regEmail, fullName,
-                country, city, phone: phone || '', birthDate,
+                country, phone: phone || '', birthDate,
                 role: 'user', createdAt: serverTimestamp(),
             });
             router.push('/');
