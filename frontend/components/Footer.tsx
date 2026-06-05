@@ -1,24 +1,18 @@
+'use client';
+
 import Link from 'next/link';
-
-const ABOUT_TEXT_MOBILE =
-  'Ваш надёжный партнёр в медицинском лечении мирового уровня в Южной Корее. ' +
-  'Подбор клиник, организация поездки и перевод — вы сосредотачиваетесь на выздоровлении.';
-
-const ABOUT_TEXT_DESKTOP =
-  'Ваш надёжный партнёр в области медицинского лечения мирового уровня в Южной Корее. ' +
-  'Мы берём на себя все вопросы, связанные с выбором больниц, организацией поездки и переводом, ' +
-  'чтобы вы могли сосредоточиться на выздоровлении.';
-
-const NAV_LINKS = [
-  { label: 'Главная',              href: '/'          },
-  { label: 'Отзывы пациентов',     href: '/reviews'   },
-  { label: 'Партнерские больницы', href: '/hospitals' },
-  { label: 'Туризм и путешествие', href: '/trip'      },
-  { label: 'О нас',                href: '/about'     },
-  { label: 'FAQ',                  href: '/faq'       },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 function NavLinkList({ className = '' }: { className?: string }) {
+  const { t } = useLanguage();
+  const NAV_LINKS = [
+    { label: t.nav.home,      href: '/'          },
+    { label: t.nav.reviews,   href: '/reviews'   },
+    { label: t.nav.hospitals, href: '/hospitals' },
+    { label: t.nav.trip,      href: '/trip'      },
+    { label: t.nav.about,     href: '/about'     },
+    { label: t.footer.faq,    href: '/faq'       },
+  ];
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
       {NAV_LINKS.map((n) => (
@@ -75,7 +69,7 @@ function ContactBlock() {
   );
 }
 
-function BrandBlock({ text }: { text: string }) {
+function BrandBlock({ text }: { text: string; }) {
   return (
     <div className="flex flex-col gap-4">
       <Link href="/" className="shrink-0 w-fit">
@@ -115,22 +109,21 @@ function IconButtons({ className = '' }: { className?: string }) {
 }
 
 export default function Footer() {
+  const { t } = useLanguage();
   return (
     <footer style={{ backgroundColor: '#21393B' }}>
       <div className="max-w-[1440px] mx-auto px-[clamp(24px,8vw,120px)] py-10 md:py-20">
 
-        {/* ── Мобилка (по макету) ─────────────────────────────────────── */}
+        {/* ── Мобилка ─────────────────────────────────────────────────── */}
         <div className="flex flex-col gap-8 md:hidden">
-          <BrandBlock text={ABOUT_TEXT_MOBILE} />
+          <BrandBlock text={t.footer.aboutMobile} />
           <IconButtons />
-
           <div className="flex flex-col gap-4">
-            <h4 className="text-h3 text-white font-semibold">Быстрые ссылки</h4>
+            <h4 className="text-h3 text-white font-semibold">{t.footer.quickLinks}</h4>
             <NavLinkList />
           </div>
-
           <div className="flex flex-col gap-4">
-            <h4 className="text-h3 text-white font-semibold">Связаться с нами</h4>
+            <h4 className="text-h3 text-white font-semibold">{t.footer.contactUs}</h4>
             <ContactBlock />
           </div>
         </div>
@@ -138,16 +131,14 @@ export default function Footer() {
         {/* ── Десктоп ─────────────────────────────────────────────────── */}
         <div className="hidden md:grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2 flex flex-col gap-6">
-            <BrandBlock text={ABOUT_TEXT_DESKTOP} />
+            <BrandBlock text={t.footer.aboutDesktop} />
             <IconButtons />
           </div>
-
           <div className="md:col-span-1">
             <NavLinkList />
           </div>
-
           <div className="md:col-span-1 flex flex-col gap-4">
-            <h4 className="text-h3 text-white">Связаться с нами</h4>
+            <h4 className="text-h3 text-white">{t.footer.contactUs}</h4>
             <ContactBlock />
           </div>
         </div>
@@ -156,21 +147,13 @@ export default function Footer() {
       {/* ── Нижняя полоса ───────────────────────────────────────────── */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.25)' }}>
         <div className="max-w-[1440px] mx-auto px-[clamp(24px,8vw,120px)] py-6 md:py-5 flex flex-col items-center gap-4 md:flex-row md:justify-between md:gap-3">
-          <p className="text-caption text-white/40 text-center">
-            © 2026 KoreaMedTour. Все права защищены.
-          </p>
+          <p className="text-caption text-white/40 text-center">{t.footer.rights}</p>
           <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
-            <Link
-              href="/privacy"
-              className="text-caption text-white/40 hover:text-white/70 transition-colors text-center"
-            >
-              Политика конфиденциальности
+            <Link href="/privacy" className="text-caption text-white/40 hover:text-white/70 transition-colors text-center">
+              {t.footer.privacy}
             </Link>
-            <Link
-              href="/terms"
-              className="text-caption text-white/40 hover:text-white/70 transition-colors text-center"
-            >
-              Условия предоставления услуг
+            <Link href="/terms" className="text-caption text-white/40 hover:text-white/70 transition-colors text-center">
+              {t.footer.terms}
             </Link>
           </div>
         </div>

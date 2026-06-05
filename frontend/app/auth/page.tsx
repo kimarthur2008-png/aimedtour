@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
+import DateInputDMY from '@/components/DateInputDMY';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     sendPasswordResetEmail,
-    signOut,
     updateProfile,
     GoogleAuthProvider,
     signInWithPopup,
@@ -20,13 +22,26 @@ import { auth, db } from '@/lib/firebase';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
+import Select, { components } from 'react-select';
+
+import countries from 'i18n-iso-countries';
+import ru from 'i18n-iso-countries/langs/ru.json';
+countries.registerLocale(ru);
+
+const options = Object.entries(countries.getNames('ru')).map(([code, name]) => ({
+    value: code,
+    label: name,
+}));
+
 type Mode = 'login-nick' | 'login-email' | 'forgot-password' | 'register';
 
-const ADMIN_EMAILS      = ['yeah.sir.228@gmail.com'];
-const CONSULTANT_EMAILS = ['kola.molatilek2008@gmail.com'];
-function isPrivileged(email: string) {
-    return ADMIN_EMAILS.includes(email) || CONSULTANT_EMAILS.includes(email);
-}
+const ValueContainer = ({ children, ...props }: any) => (
+    <components.ValueContainer {...props}>
+        <img src="/icons/countryauth.svg" className="w-5 h-5 shrink-0 mr-3" />
+        {children}
+    </components.ValueContainer>
+);
+
 async function isNickUnique(nick: string) {
     const q = query(collection(db, 'users'), where('nick', '==', nick.toLowerCase()));
     return (await getDocs(q)).empty;
@@ -61,7 +76,7 @@ function Input({ icon, ...props }: { icon?: string } & React.InputHTMLAttributes
     return (
         <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={{ border: '1.5px solid #DAE3E8' }}>
             {icon
-                ? <img src={icon} className="w-5 h-5 shrink-0" />
+                ? <img src={icon} className="w-5 h-5 shrink-0 pointer-events-none" />
                 : <div className="w-5 h-5 rounded bg-gray-200 shrink-0" />
             }
             <input
@@ -73,11 +88,8 @@ function Input({ icon, ...props }: { icon?: string } & React.InputHTMLAttributes
     );
 }
 
-function capitalize(value: string) {
-    return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
 export default function AuthPage() {
+    const { t } = useLanguage();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [mode, setMode] = useState<Mode>(
@@ -100,7 +112,6 @@ export default function AuthPage() {
     const [regEmail,   setRegEmail]   = useState('');
     const [regPass,    setRegPass]    = useState('');
     const [country,    setCountry]    = useState('');
-    const [city,       setCity]       = useState('');
     const [phone,      setPhone]      = useState('');
     const [birthDate,  setBirthDate]  = useState('');
     const [nickError,  setNickError]  = useState('');
@@ -109,53 +120,57 @@ export default function AuthPage() {
         setError(''); setInfo(''); setNickError('');
         setNick(''); setPass(''); setEmail(''); setEmailPass(''); setResetEmail('');
         setRegNick(''); setFullName(''); setRegEmail(''); setRegPass('');
-        setCountry(''); setCity(''); setPhone(''); setBirthDate('');
+        setCountry(''); setPhone(''); setBirthDate('');
     }
-    function switchMode(m: Mode) { reset(); setMode(m); }
+    // Синхронизация URL → mode (при переходе через хедер)
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        const next: Mode = tab === 'register' ? 'register' : 'login-email';
+        setMode(next);
+    }, [searchParams]);
+
+    // Синхронизация mode → URL (при клике на таб-кнопки)
+    function switchMode(m: Mode) {
+        reset();
+        setMode(m);
+        router.replace(m === 'register' ? '/auth?tab=register' : '/auth', { scroll: false });
+    }
 
     async function handleLoginNick() {
-        if (!nick.trim() || !pass) { setError('Заполните все поля'); return; }
+        if (!nick.trim() || !pass) { setError(t.auth.errFillAll); return; }
         setLoading(true); setError('');
         try {
             const userDoc = await findUserByNick(nick.trim());
-            if (!userDoc) { setError('Пользователь с таким именем не найден'); setLoading(false); return; }
+            if (!userDoc) { setError(t.auth.errUserNotFound); setLoading(false); return; }
             const userData = userDoc.data();
-            if (!userData.email) { setError('Ошибка входа'); setLoading(false); return; }
-            const cred = await signInWithEmailAndPassword(auth, userData.email, pass);
-            if (!isPrivileged(cred.user.email ?? '')) {
-                const snap = await getDoc(doc(db, 'users', cred.user.uid));
-                if (!snap.exists()) { await signOut(auth); setError('Аккаунт не найден'); return; }
-            }
+            if (!userData.email) { setError(t.auth.errLogin); setLoading(false); return; }
+            await signInWithEmailAndPassword(auth, userData.email, pass);
             router.push('/');
         } catch (e: any) {
             const codes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'];
-            setError(codes.includes(e.code) ? 'Неверное имя пользователя или пароль' : 'Ошибка входа');
+            setError(codes.includes(e.code) ? t.auth.errWrongNick : t.auth.errLogin);
         } finally { setLoading(false); }
     }
 
     async function handleLoginEmail() {
-        if (!email || !emailPass) { setError('Заполните все поля'); return; }
+        if (!email || !emailPass) { setError(t.auth.errFillAll); return; }
         setLoading(true); setError('');
         try {
-            const cred = await signInWithEmailAndPassword(auth, email, emailPass);
-            if (!isPrivileged(cred.user.email ?? '')) {
-                const snap = await getDoc(doc(db, 'users', cred.user.uid));
-                if (!snap.exists()) { await signOut(auth); setError('Аккаунт не найден'); return; }
-            }
+            await signInWithEmailAndPassword(auth, email, emailPass);
             router.push('/');
         } catch (e: any) {
             const codes = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'];
-            setError(codes.includes(e.code) ? 'Неверный email или пароль' : 'Ошибка входа');
+            setError(codes.includes(e.code) ? t.auth.errWrongEmail : t.auth.errLogin);
         } finally { setLoading(false); }
     }
 
     async function handleForgotPassword() {
-        if (!resetEmail) { setError('Введите email'); return; }
+        if (!resetEmail) { setError(t.auth.errEnterEmail); return; }
         setLoading(true); setError(''); setInfo('');
         try {
             await sendPasswordResetEmail(auth, resetEmail);
-            setInfo(`Письмо отправлено на ${resetEmail}`);
-        } catch { setError('Ошибка. Проверьте email'); }
+            setInfo(`${t.auth.emailSentTo} ${resetEmail}`);
+        } catch { setError(t.auth.errEmailCheck); }
         finally { setLoading(false); }
     }
 
@@ -166,53 +181,51 @@ export default function AuthPage() {
             const user = result.user;
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             if (!userDoc.exists()) {
-                const baseNick = user.displayName?.toLowerCase().replace(/\s+/g, '_') || user.email?.split('@')[0] || 'user';
-                let finalNick = baseNick; let counter = 1;
-                while (!(await isNickUnique(finalNick))) { finalNick = `${baseNick}_${counter}`; counter++; }
-                await setDoc(doc(db, 'users', user.uid), {
-                    nick: finalNick, email: user.email || '',
-                    fullName: user.displayName || '', country: '', city: '',
-                    phone: '', birthDate: '', role: 'user',
-                    createdAt: serverTimestamp(), googleAuth: true,
-                });
+                router.push('/auth/complete');
+            } else {
+                router.push('/');
             }
-            router.push('/');
         } catch (e: any) {
             if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-                setError('Ошибка входа через Google');
+                setError(t.auth.errGoogle);
             }
         } finally { setLoading(false); }
     }
 
     async function handleRegister() {
-        if (!regNick.trim()) { setNickError('Введите имя пользователя'); return; }
-        if (!fullName)       { setError('Введите полное имя'); return; }
-        if (!regEmail)       { setError('Введите email'); return; }
-        if (regPass.length < 6) { setError('Пароль минимум 6 символов'); return; }
-        if (!country || !city || !birthDate) { setError('Заполните все поля'); return; }
+        if (!regNick.trim()) { setNickError(t.auth.errEnterUsername); return; }
+        if (!fullName)       { setError(t.auth.errEnterFullName); return; }
+        if (!regEmail)       { setError(t.auth.errEnterEmail); return; }
+        if (regPass.length < 6) { setError(t.auth.errShortPassword); return; }
+        if (!country || !birthDate) { setError(t.auth.errFillAll); return; }
         setLoading(true); setError(''); setNickError('');
         try {
-            if (!(await isNickUnique(regNick.trim()))) { setNickError('Имя пользователя уже занято'); setLoading(false); return; }
+            if (!(await isNickUnique(regNick.trim()))) { setNickError(t.auth.errUsernameTaken); setLoading(false); return; }
             const cred = await createUserWithEmailAndPassword(auth, regEmail, regPass);
             await updateProfile(cred.user, { displayName: fullName });
             await setDoc(doc(db, 'users', cred.user.uid), {
                 nick: regNick.toLowerCase(), email: regEmail, fullName,
-                country, city, phone: phone || '', birthDate,
+                country, phone: phone || '', birthDate,
                 role: 'user', createdAt: serverTimestamp(),
             });
             router.push('/');
         } catch (e: any) {
-            if (e.code === 'auth/email-already-in-use') setError('Email уже используется');
-            else if (e.code === 'auth/weak-password')   setError('Слишком слабый пароль');
-            else setError('Ошибка регистрации');
+            if (e.code === 'auth/email-already-in-use') setError(t.auth.errEmailTaken);
+            else if (e.code === 'auth/weak-password')   setError(t.auth.errWeakPassword);
+            else setError(t.auth.errRegister);
         } finally { setLoading(false); }
     }
 
     const isLoginMode = mode === 'login-nick' || mode === 'login-email' || mode === 'forgot-password';
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-6 py-12" style={{ backgroundColor: '#F7FAE8' }}>
-            <div className="w-full max-w-[540px] bg-white rounded-3xl p-8 md:p-10" style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.08)' }}>
+        <div className="min-h-page flex items-center justify-center px-6 py-12" style={{ backgroundColor: '#C0CEB9' }}>
+            <motion.div
+                layout
+                className="w-full max-w-[540px] bg-white rounded-3xl p-8 md:p-10"
+                style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.08)' }}
+                transition={{ layout: { type: 'spring', duration: 0.45, bounce: 0.2 } }}
+            >
 
                 {/* Табы */}
                 <div className="flex rounded-2xl p-1 mb-8" style={{ backgroundColor: '#F0F2EE' }}>
@@ -223,7 +236,7 @@ export default function AuthPage() {
                             ? { backgroundColor: 'white', color: '#21393B', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }
                             : { color: '#73907E' }}
                     >
-                        Войти
+                        {t.auth.tabLogin}
                     </button>
                     <button
                         onClick={() => switchMode('register')}
@@ -232,25 +245,34 @@ export default function AuthPage() {
                             ? { backgroundColor: 'white', color: '#21393B', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }
                             : { color: '#73907E' }}
                     >
-                        Зарегистрироваться
+                        {t.auth.tabRegister}
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-5">
+                <div style={{ position: 'relative', overflow: 'hidden' }}>
+                <AnimatePresence mode="popLayout">
+                <motion.div
+                    key={mode}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="flex flex-col gap-5"
+                >
 
                     {/* ── Вход по имени пользователя ── */}
                     {mode === 'login-nick' && (
                         <>
-                            <h1 className="text-h2" style={{ color: '#21393B' }}>Войдите в аккаунт</h1>
+                            <h1 className="text-h2" style={{ color: '#21393B' }}>{t.auth.loginNickTitle}</h1>
 
-                            <Field label="Имя пользователя">
+                            <Field label={t.auth.usernameLbl}>
                                 <Input
                                     icon="/icons/nameauth.svg"
-                                    placeholder="Имя_пользователя"
+                                    placeholder={t.auth.usernamePh}
                                     value={nick}
                                     onChange={(e) => setNick(e.target.value)} />
                             </Field>
-                            <Field label="Пароль">
+                            <Field label={t.auth.passwordLbl}>
                                 <Input icon="/icons/passwordauth.svg"
                                        placeholder="········"
                                        type="password"
@@ -260,10 +282,10 @@ export default function AuthPage() {
 
                             <div className="flex flex-col gap-1">
                                 <button onClick={() => switchMode('login-email')} className="text-left text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                                    Войти по почте
+                                    {t.auth.loginByEmail}
                                 </button>
                                 <button onClick={() => switchMode('forgot-password')} className="text-left text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                                    Забыли пароль?
+                                    {t.auth.forgotPassword}
                                 </button>
                             </div>
                         </>
@@ -272,14 +294,14 @@ export default function AuthPage() {
                     {/* ── Вход по email ── */}
                     {mode === 'login-email' && (
                         <>
-                            <h1 className="text-h2" style={{ color: '#21393B' }}>Войдите по email</h1>
+                            <h1 className="text-h2" style={{ color: '#21393B' }}>{t.auth.loginEmailTitle}</h1>
 
-                            <Field label="Электронная почта">
+                            <Field label={t.auth.emailLbl}>
                                 <Input
                                     icon="/icons/emailauth.svg"
                                     placeholder="you@example.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
                             </Field>
-                            <Field label="Пароль">
+                            <Field label={t.auth.passwordLbl}>
                                 <Input
                                     icon="/icons/passwordauth.svg"
                                     placeholder="········" type="password" value={emailPass} onChange={(e) => setEmailPass(e.target.value)} />
@@ -287,10 +309,10 @@ export default function AuthPage() {
 
                             <div className="flex flex-col gap-1">
                                 <button onClick={() => switchMode('login-nick')} className="text-left text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                                    Войти по имени пользователя
+                                    {t.auth.loginByUsername}
                                 </button>
                                 <button onClick={() => switchMode('forgot-password')} className="text-left text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                                    Забыли пароль?
+                                    {t.auth.forgotPassword}
                                 </button>
                             </div>
                         </>
@@ -299,17 +321,17 @@ export default function AuthPage() {
                     {/* ── Восстановление пароля ── */}
                     {mode === 'forgot-password' && (
                         <>
-                            <h1 className="text-h2" style={{ color: '#21393B' }}>Восстановление пароля</h1>
+                            <h1 className="text-h2" style={{ color: '#21393B' }}>{t.auth.forgotTitle}</h1>
                             <p className="text-body" style={{ color: '#21393B', opacity: 0.6 }}>
-                                Введите email — мы отправим ссылку для сброса пароля
+                                {t.auth.forgotDesc}
                             </p>
 
-                            <Field label="Электронная почта">
+                            <Field label={t.auth.emailLbl}>
                                 <Input placeholder="you@example.com" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
                             </Field>
 
                             <button onClick={() => switchMode('login-email')} className="text-left text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                                Вернуться ко входу
+                                {t.auth.backToLogin}
                             </button>
                         </>
                     )}
@@ -317,26 +339,26 @@ export default function AuthPage() {
                     {/* ── Регистрация ── */}
                     {mode === 'register' && (
                         <>
-                            <h1 className="text-h2" style={{ color: '#21393B' }}>Создать аккаунт</h1>
+                            <h1 className="text-h2" style={{ color: '#21393B' }}>{t.auth.registerTitle}</h1>
 
-                            <Field label="Имя пользователя">
+                            <Field label={t.auth.usernameLbl}>
                                 <div className="flex flex-col gap-1">
                                     <Input
                                         icon="/icons/nameauth.svg"
-                                        placeholder="Имя_пользователя"
+                                        placeholder={t.auth.usernamePh}
                                         value={regNick}
                                         onChange={(e) => setRegNick(e.target.value)} />
-                                        {nickError && <p className="text-caption" style={{ color: '#e53e3e' }}>{nickError}</p>}
+                                    {nickError && <p className="text-caption" style={{ color: '#e53e3e' }}>{nickError}</p>}
                                 </div>
                             </Field>
-                            <Field label="Полное имя">
+                            <Field label={t.auth.fullNameLbl}>
                                 <Input
                                     icon="/icons/nameauth.svg"
-                                    placeholder="Сергей Лебедев"
+                                    placeholder={t.auth.fullNamePh}
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)} />
                             </Field>
-                            <Field label="Электронная почта">
+                            <Field label={t.auth.emailLbl}>
                                 <Input
                                     icon ="/icons/emailauth.svg"
                                     placeholder="you@example.com"
@@ -344,26 +366,80 @@ export default function AuthPage() {
                                     value={regEmail}
                                     onChange={(e) => setRegEmail(e.target.value)} />
                             </Field>
-                            <Field label="Пароль">
+                            <Field label={t.auth.passwordLbl}>
                                 <Input
                                     icon="/icons/passwordauth.svg"
-                                    placeholder="Минимум 6 символов"
+                                    placeholder={t.auth.passwordPh}
                                     type="password"
                                     value={regPass}
                                     onChange={(e) => setRegPass(e.target.value)} />
                             </Field>
 
-                            <Field label="Страна">
-                                <Input
-                                    icon ="/icons/countryauth.svg"
-                                    placeholder="Страна"
-                                    value={country}
-                                    onChange={(e) => setCountry(capitalize(e.target.value))}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-label" style={{ color: '#21393B' }}>{t.auth.countryLbl}</label>
+                                <Select
+                                    instanceId="auth-country"
+                                    options={options}
+                                    placeholder={t.auth.countryPh}
+                                    components={{ ValueContainer }}
+                                    onChange={(opt) => setCountry(opt?.label ?? '')}
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            border: '1.5px solid #DAE3E8',
+                                            borderRadius: '16px',
+                                            padding: '0 8px 0 12px',
+                                            boxShadow: 'none',
+                                            backgroundColor: 'transparent',
+                                            minHeight: '54px',
+                                            fontSize: 'clamp(15px, 0.8vw + 12px, 17px)',
+                                            color: '#21393B',
+                                            '&:hover': { borderColor: '#DAE3E8' },
+                                        }),
+                                        valueContainer: (base) => ({
+                                            ...base,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '0 0 0 4px',
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            borderRadius: '16px',
+                                            border: '1.5px solid #DAE3E8',
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                            overflow: 'hidden',
+                                            fontSize: '14px',
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isFocused ? 'rgba(76,109,124,0.1)' : 'white',
+                                            color: '#21393B',
+                                            cursor: 'pointer',
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: '#21393B',
+                                            opacity: 0.4,
+                                        }),
+                                        singleValue: (base) => ({
+                                            ...base,
+                                            color: '#21393B',
+                                        }),
+                                        input: (base) => ({
+                                            ...base,
+                                            color: '#21393B',
+                                        }),
+                                        indicatorSeparator: () => ({ display: 'none' }),
+                                        dropdownIndicator: (base) => ({
+                                            ...base,
+                                            color: 'rgba(33,57,59,0.4)',
+                                        }),
+                                    }}
                                 />
-                            </Field>
+                            </div>
 
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-label" style={{ color: '#21393B' }}>Телефон (необязательно)</label>
+                                <label className="text-label" style={{ color: '#21393B' }}>{t.auth.phoneLbl}</label>
                                 <PhoneInput
                                     country="ru"
                                     value={phone}
@@ -403,16 +479,12 @@ export default function AuthPage() {
                                         width: '90%',
                                     }}
                                     enableSearch
-                                    searchPlaceholder="Поиск страны..."
+                                    searchPlaceholder={t.auth.phoneSearch}
                                 />
                             </div>
 
-                            <Field label="Дата рождения">
-                                <Input
-                                    icon="/icons/dateauth.svg"
-                                    type="date"
-                                    value={birthDate}
-                                    onChange={(e) => setBirthDate(e.target.value)} />
+                            <Field label={t.auth.birthDateLbl}>
+                                <DateInputDMY value={birthDate} onChange={setBirthDate} />
                             </Field>
                         </>
                     )}
@@ -433,17 +505,17 @@ export default function AuthPage() {
                         style={{ backgroundColor: '#73907E' }}
                     >
                         {loading ? '...'
-                            : mode === 'login-nick' || mode === 'login-email' ? 'Войти'
-                                : mode === 'forgot-password' ? 'Отправить письмо'
-                                    : 'Создать аккаунт'}
+                            : mode === 'login-nick' || mode === 'login-email' ? t.auth.btnLogin
+                                : mode === 'forgot-password' ? t.auth.btnSendEmail
+                                    : t.auth.btnCreateAccount}
                     </button>
 
                     {/* Google — только на входе */}
-                    {isLoginMode && mode !== 'forgot-password' && (
+                    {(isLoginMode && mode !== 'forgot-password' || mode === 'register') && (
                         <>
                             <div className="flex items-center gap-3">
                                 <div className="flex-1 h-px" style={{ backgroundColor: '#DAE3E8' }} />
-                                <span className="text-caption" style={{ color: '#73907E' }}>или</span>
+                                <span className="text-caption" style={{ color: '#73907E' }}>{t.auth.or}</span>
                                 <div className="flex-1 h-px" style={{ backgroundColor: '#DAE3E8' }} />
                             </div>
                             <button
@@ -453,7 +525,7 @@ export default function AuthPage() {
                                 style={{ border: '1.5px solid #DAE3E8', color: '#21393B' }}
                             >
                                 <GoogleIcon />
-                                Войти через Google
+                                {mode === 'register' ? t.auth.btnGoogleRegister : t.auth.btnGoogleLogin}
                             </button>
                         </>
                     )}
@@ -461,22 +533,24 @@ export default function AuthPage() {
                     {/* Переключатель внизу */}
                     <p className="text-center text-body" style={{ color: '#21393B', opacity: 0.6 }}>
                         {isLoginMode ? (
-                            <>Нет аккаунта?{' '}
+                            <>{t.auth.noAccount}{' '}
                                 <button onClick={() => switchMode('register')} className="font-medium" style={{ color: '#4C6D7C' }}>
-                                    Зарегистрируйтесь
+                                    {t.auth.signUpLink}
                                 </button>
                             </>
                         ) : (
-                            <>Уже есть аккаунт?{' '}
+                            <>{t.auth.haveAccount}{' '}
                                 <button onClick={() => switchMode('login-email')} className="font-medium" style={{ color: '#4C6D7C' }}>
-                                    Войти
+                                    {t.auth.signInLink}
                                 </button>
                             </>
                         )}
                     </p>
 
+                </motion.div>
+                </AnimatePresence>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }

@@ -9,7 +9,7 @@ export default function ReviewCard({ patientCase }: Props) {
 
   return (
     <article
-      className="bg-white rounded-2xl overflow-hidden flex flex-col"
+      className="animate-slide-up bg-white rounded-2xl overflow-hidden flex flex-col"
       style={{ border: '1px solid rgba(0,0,0,0.06)' }}
     >
       {/* Фото */}
