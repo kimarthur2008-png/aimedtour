@@ -19,7 +19,7 @@ interface Props {
 export default function ValueCard({ title, description, icon }: Props) {
   return (
     <div
-      className="flex flex-col items-center text-center gap-4 rounded-2xl px-6 py-8 md:px-8 md:py-10 h-full bg-[#90AEBC]/80"
+      className="animate-slide-up flex flex-col items-center text-center gap-4 rounded-2xl px-6 py-8 md:px-8 md:py-10 h-full bg-[#90AEBC]/80"
     >
       <div
         className="flex items-center justify-center w-14 h-14 rounded-full"

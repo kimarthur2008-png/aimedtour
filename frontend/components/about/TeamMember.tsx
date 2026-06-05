@@ -16,7 +16,7 @@ function initials(name: string) {
 
 export default function TeamMember({ name, role, image }: Props) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <div className="animate-slide-up flex flex-col items-center gap-4 text-center">
       <div
         className="relative w-[140px] h-[140px] md:w-[180px] md:h-[180px] rounded-full overflow-hidden shrink-0"
         style={{ border: '4px solid rgba(255,255,255,0.5)' }}

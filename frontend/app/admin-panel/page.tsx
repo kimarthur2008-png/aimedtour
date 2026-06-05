@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useTourismAdmin, TourismType, TourismItem, TourismHero } from '@/hooks/useTourism';
 
 const TYPE_LABELS: Record<TourismType, string> = {
@@ -87,6 +88,23 @@ export default function TourismAdminPage() {
     return (
         <div style={{ backgroundColor: '#F7FAE8', minHeight: '100vh' }}>
             <div className="max-w-[1200px] mx-auto px-[clamp(16px,5vw,60px)] py-10">
+
+                {/* Навигация между разделами */}
+                <div className="flex flex-wrap gap-3 mb-8">
+                    <span
+                        className="px-4 py-2 rounded-xl text-sm font-medium"
+                        style={{ backgroundColor: '#21393B', color: '#F7FAE8' }}
+                    >
+                        Туризм и путешествия
+                    </span>
+                    <Link
+                        href="/admin-panel/hospitals"
+                        className="px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:opacity-80"
+                        style={{ backgroundColor: '#DAE3E8', color: '#21393B' }}
+                    >
+                        🏥 Клиники
+                    </Link>
+                </div>
 
                 <h1 className="text-h2 mb-8" style={{ color: '#21393B' }}>
                     Управление: Туризм и путешествия

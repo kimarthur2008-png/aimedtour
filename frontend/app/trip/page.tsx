@@ -1,17 +1,12 @@
 'use client';
 
 import { useTourism } from '@/hooks/useTourism';
+import { useLanguage } from '@/context/LanguageContext';
 
 const SECTION_ICONS: Record<string, string> = {
     sights:   '/icons/tourism/sights.svg',
     food:     '/icons/tourism/food.svg',
     shopping: '/icons/tourism/shopping.svg',
-};
-
-const SECTION_LABELS: Record<string, string> = {
-    sights:   'Достопримечательности и культура',
-    food:     'Кулинарные угощения',
-    shopping: 'Премиальный шопинг',
 };
 
 const DEFAULT_HERO_IMG = '/images/tourism-hero.jpg';
@@ -39,16 +34,17 @@ function TourCard({ item }: { item: { name: string; description: string; imageUr
 }
 
 function SectionBlock({
-                          type,
-                          items,
-                      }: {
+    type,
+    items,
+    label,
+}: {
     type: 'sights' | 'food' | 'shopping';
     items: ReturnType<typeof useTourism>['items'];
+    label: string;
 }) {
     if (items.length === 0) return null;
     return (
         <section className="mb-14">
-            {/* Заголовок секции */}
             <div className="flex items-center gap-3 mb-6">
                 <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -56,10 +52,8 @@ function SectionBlock({
                 >
                     <img src={SECTION_ICONS[type]} alt="" className="w-5 h-5" />
                 </div>
-                <h2 className="text-h2" style={{ color: '#21393B' }}>{SECTION_LABELS[type]}</h2>
+                <h2 className="text-h2" style={{ color: '#21393B' }}>{label}</h2>
             </div>
-
-            {/* Карточки */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {items.map((item) => (
                     <TourCard key={item.id} item={item} />
@@ -71,6 +65,7 @@ function SectionBlock({
 
 export default function TripPage() {
     const { sights, food, shopping, hero, loading, error } = useTourism();
+    const { t } = useLanguage();
 
     return (
         <div style={{ backgroundColor: '#C7D4D8', minHeight: '100vh' }}>
@@ -99,12 +94,14 @@ export default function TripPage() {
                                     </>
                                 ) : hero.heroTitle;
                             })()
-                            : <>Исцеление и <span style={{ color: '#21393B' }}>открытие</ span></>
+                            : <>
+                                {t.trip.heroFallbackTitle.replace(t.trip.heroFallbackHighlight, '').trimEnd()}{' '}
+                                <span style={{ color: '#21393B' }}>{t.trip.heroFallbackHighlight}</span>
+                              </>
                         }
                     </h1>
                     <p className="text-body text-white/80">
-                        {hero?.heroSubtitle ||
-                            'Ваше медицинское путешествие в Корее — это также возможность познакомиться с яркой культурой, мирового уровня шопинга и незабываемой кухней.'}
+                        {hero?.heroSubtitle || t.trip.heroFallbackDesc}
                     </p>
                 </div>
             </div>
@@ -133,13 +130,13 @@ export default function TripPage() {
 
                 {!loading && !error && (
                     <>
-                        <SectionBlock type="sights"   items={sights}   />
-                        <SectionBlock type="food"     items={food}     />
-                        <SectionBlock type="shopping" items={shopping} />
+                        <SectionBlock type="sights"   items={sights}   label={t.trip.sightsLabel}   />
+                        <SectionBlock type="food"     items={food}     label={t.trip.foodLabel}     />
+                        <SectionBlock type="shopping" items={shopping} label={t.trip.shoppingLabel} />
 
                         {sights.length === 0 && food.length === 0 && shopping.length === 0 && (
                             <p className="text-body text-center" style={{ color: '#21393B', opacity: 0.5 }}>
-                                Контент скоро появится.
+                                {t.trip.emptyContent}
                             </p>
                         )}
                     </>
