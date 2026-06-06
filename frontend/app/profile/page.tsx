@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import {
+  sendCoordinatorMessage,
+  onCoordinatorChatUpdated,
+  type CoordinatorChat,
+} from '@/lib/firebase-chat';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import Select, { components } from 'react-select';
@@ -137,6 +142,37 @@ export default function ProfilePage() {
 
   const [consult,        setConsult]       = useState<Consultation | null>(null);
   const [consultLoading, setConsultLoading] = useState(true);
+
+  const [chat,        setChat]        = useState<CoordinatorChat | null>(null);
+  const [chatInput,   setChatInput]   = useState('');
+  const [chatSending, setChatSending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    return onCoordinatorChatUpdated(user.uid, setChat);
+  }, [user]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chat?.messages]);
+
+  async function handleChatSend() {
+    if (!chatInput.trim() || !user) return;
+    setChatSending(true);
+    try {
+      await sendCoordinatorMessage(
+        user.uid,
+        profile?.fullName || profile?.nick || user.email || '',
+        'user',
+        profile?.fullName || profile?.nick || user.email || '',
+        chatInput.trim()
+      );
+      setChatInput('');
+    } finally {
+      setChatSending(false);
+    }
+  }
 
   const [editing,   setEditing]   = useState(false);
   const [saving,    setSaving]    = useState(false);
@@ -541,23 +577,79 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ── Баннер координатора ──────────────────── */}
-            <div className="rounded-3xl px-6 py-5 flex items-center justify-between gap-4 flex-wrap" style={{ backgroundColor: '#2D4A3E' }}>
-              <div>
-                <p className="font-semibold text-white text-sm">{t.profile.needHelp}</p>
-                <p className="text-xs mt-0.5 text-white/70">
-                  {consult?.coordinator
-                    ? `${t.profile.coordinator} ${consult.coordinator.name} ${t.profile.coordinatorAvailable}`
-                    : t.profile.coordinatorDefault}
-                </p>
+            {/* ── Чат с координатором ──────────────────── */}
+            <div className="bg-white rounded-3xl flex flex-col overflow-hidden" style={{ minHeight: '420px' }}>
+              {/* Шапка */}
+              <div className="px-5 py-4 flex items-center gap-3 border-b" style={{ borderColor: '#DAE3E8', backgroundColor: '#2D4A3E' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#73907E' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-white text-sm">{t.profile.coordinator}</p>
+                  <p className="text-xs text-white/60">
+                    {chat?.coordinatorName ?? t.profile.toBeDetermined}
+                  </p>
+                </div>
               </div>
-              <Link
-                href="/consult"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white/90 border border-white/30 hover:bg-white/10 transition-colors whitespace-nowrap"
-              >
-                <img src="/icons/phoneauth.svg" alt="" className="w-4 h-4 opacity-80" />
-                {t.profile.coordinatorCall}
-              </Link>
+
+              {/* Сообщения */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3" style={{ minHeight: '280px', maxHeight: '340px' }}>
+                {!chat || chat.messages.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-sm text-center opacity-40" style={{ color: '#21393B' }}>
+                      {t.profile.coordinatorDefault}
+                    </p>
+                  </div>
+                ) : (
+                  chat.messages.map((msg) => {
+                    const isUser = msg.sender === 'user';
+                    return (
+                      <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className="max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm"
+                          style={{
+                            backgroundColor: isUser ? '#21393B' : '#F0F4F2',
+                            color: isUser ? 'white' : '#21393B',
+                            borderBottomRightRadius: isUser ? '4px' : undefined,
+                            borderBottomLeftRadius: !isUser ? '4px' : undefined,
+                          }}
+                        >
+                          <p style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</p>
+                          <p className="text-[10px] mt-1 opacity-50 text-right">
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Ввод */}
+              <div className="px-4 py-3 border-t flex gap-2" style={{ borderColor: '#DAE3E8' }}>
+                <textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend(); } }}
+                  placeholder="Написать координатору..."
+                  rows={1}
+                  className="flex-1 resize-none rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ border: '1.5px solid #DAE3E8', color: '#21393B', maxHeight: '80px' }}
+                />
+                <button
+                  onClick={handleChatSend}
+                  disabled={!chatInput.trim() || chatSending}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-opacity disabled:opacity-40 self-end"
+                  style={{ backgroundColor: '#21393B' }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
