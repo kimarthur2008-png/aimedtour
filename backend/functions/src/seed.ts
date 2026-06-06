@@ -29,11 +29,14 @@ export async function seedIfEmpty() {
 
   // ── Больницы (фиксированные ID для связи с diseases) ────────────────────────
   const H = {
-    asan:     'hospital-asan',
-    snuh:     'hospital-snuh',
-    severance:'hospital-severance',
-    samsung:  'hospital-samsung',
-    gangnam:  'hospital-gangnam',
+    asan:      'hospital-asan',
+    snuh:      'hospital-snuh',
+    severance: 'hospital-severance',
+    samsung:   'hospital-samsung',
+    gangnam:   'hospital-gangnam',
+    mirae:     'hospital-mirae-dental',   // Стоматология
+    nune:      'hospital-nune-eye',       // Офтальмология
+    chamc:     'hospital-chamc',          // ЭКО / Диагностика
   };
   const D = {
     gastric:  'disease-gastric-cancer',
@@ -44,24 +47,31 @@ export async function seedIfEmpty() {
     kidney:   'disease-kidney-transplant',
     rhino:    'disease-rhinoplasty',
     spine:    'disease-spine-treatment',
+    // Новые
+    implant:  'disease-dental-implant',
+    lasik:    'disease-lasik',
+    ivf:      'disease-ivf',
+    checkup:  'disease-full-checkup',
   };
 
   const hospitals = [
     {
       id:              H.asan,
       name:            'Asan Medical Center',
-      specializations: ['Онкология', 'Кардиология', 'Нейрохирургия'],
+      specializations: ['Онкология', 'Кардиология', 'Нейрохирургия', 'Диагностика'],
       certifications:  ['JCI', 'KOIHA'],
       description:     'Крупнейший медицинский центр Кореи. 2700+ коек, 9000+ персонал.',
-      diseaseIds:      [D.gastric, D.lung, D.heart],
+      diseaseIds:      [D.gastric, D.lung, D.heart, D.checkup],
+      priceRange:      'luxury',
     },
     {
       id:              H.snuh,
       name:            'Seoul National University Hospital',
-      specializations: ['Онкология', 'Трансплантология', 'Ортопедия'],
+      specializations: ['Онкология', 'Трансплантология', 'Ортопедия', 'Диагностика'],
       certifications:  ['JCI'],
       description:     'Ведущий университетский госпиталь с 130-летней историей.',
-      diseaseIds:      [D.gastric, D.lung, D.kidney, D.knee],
+      diseaseIds:      [D.gastric, D.lung, D.kidney, D.knee, D.checkup],
+      priceRange:      'premium',
     },
     {
       id:              H.severance,
@@ -70,6 +80,7 @@ export async function seedIfEmpty() {
       certifications:  ['JCI', 'KOIHA'],
       description:     'Первая западная больница Кореи. Более 100 специальностей.',
       diseaseIds:      [D.heart, D.stroke, D.knee, D.spine],
+      priceRange:      'premium',
     },
     {
       id:              H.samsung,
@@ -78,6 +89,7 @@ export async function seedIfEmpty() {
       certifications:  ['JCI'],
       description:     'Ведущий частный медицинский центр группы Samsung.',
       diseaseIds:      [D.gastric, D.lung, D.kidney],
+      priceRange:      'luxury',
     },
     {
       id:              H.gangnam,
@@ -86,6 +98,35 @@ export async function seedIfEmpty() {
       certifications:  ['KOIHA'],
       description:     'Специализация на ортопедии и восстановительной медицине.',
       diseaseIds:      [D.knee, D.rhino, D.spine],
+      priceRange:      'mid',
+    },
+    // ── Новые клиники ──────────────────────────────────────────────────────────
+    {
+      id:              H.mirae,
+      name:            'Mirae Dental Clinic',
+      specializations: ['Стоматология'],
+      certifications:  ['KOIHA'],
+      description:     'Специализированная стоматологическая клиника. Имплантация, ортодонтия, эстетическая стоматология.',
+      diseaseIds:      [D.implant],
+      priceRange:      'mid',
+    },
+    {
+      id:              H.nune,
+      name:            'Nune Eye Hospital',
+      specializations: ['Офтальмология'],
+      certifications:  ['KOIHA'],
+      description:     'Ведущая офтальмологическая клиника Кореи. LASIK, катаракта, лечение сетчатки.',
+      diseaseIds:      [D.lasik],
+      priceRange:      'economy',
+    },
+    {
+      id:              H.chamc,
+      name:            'CHA Medical Center',
+      specializations: ['ЭКО', 'Акушерство', 'Гинекология', 'Диагностика'],
+      certifications:  ['JCI', 'KOIHA'],
+      description:     'Лидер в репродуктивной медицине и ЭКО в Азии. Комплексная диагностика.',
+      diseaseIds:      [D.ivf, D.checkup],
+      priceRange:      'premium',
     },
   ];
   for (const { id, ...data } of hospitals) {
@@ -106,6 +147,11 @@ export async function seedIfEmpty() {
     { id: D.kidney,  name: 'Трансплантация почки',     nameKo: '신장 이식',      nameEn: 'Kidney Transplant',     category: 'Трансплантология',      keywords: ['почка', 'трансплантация', 'пересадка'],                     hospitalIds: [H.snuh, H.samsung] },
     { id: D.rhino,   name: 'Пластика носа',           nameKo: '코성형',         nameEn: 'Rhinoplasty',           category: 'Пластическая хирургия', keywords: ['нос', 'пластика', 'ринопластика'],                          hospitalIds: [H.gangnam] },
     { id: D.spine,   name: 'Лечение позвоночника',    nameKo: '척추 치료',      nameEn: 'Spine Treatment',       category: 'Ортопедия',             keywords: ['позвоночник', 'спина', 'грыжа'],                            hospitalIds: [H.severance, H.gangnam] },
+    // Новые болезни под новые категории квиза
+    { id: D.implant, name: 'Дентальная имплантация',  nameKo: '치과 임플란트',  nameEn: 'Dental Implant',        category: 'Стоматология',          keywords: ['зуб', 'имплант', 'стоматология', 'коронка'],               hospitalIds: [H.mirae] },
+    { id: D.lasik,   name: 'LASIK / Коррекция зрения',nameKo: '라식',           nameEn: 'LASIK Eye Surgery',     category: 'Офтальмология',         keywords: ['зрение', 'лазик', 'близорукость', 'офтальмология'],         hospitalIds: [H.nune] },
+    { id: D.ivf,     name: 'ЭКО',                     nameKo: '시험관 아기',    nameEn: 'IVF',                   category: 'ЭКО',                   keywords: ['эко', 'бесплодие', 'беременность', 'репродуктология'],      hospitalIds: [H.chamc] },
+    { id: D.checkup, name: 'Комплексная диагностика',  nameKo: '건강 검진',     nameEn: 'Full Health Check-up',  category: 'Диагностика',           keywords: ['диагностика', 'чекап', 'обследование', 'анализы'],          hospitalIds: [H.asan, H.snuh, H.chamc] },
   ];
   for (const { id, ...data } of diseases) {
     const ref = db.collection('diseases').doc(id);
