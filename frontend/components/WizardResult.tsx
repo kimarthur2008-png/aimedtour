@@ -157,13 +157,13 @@ export default function WizardResult({ results, onReset }: Props) {
         >
           Записаться на консультацию
         </Link>
-        <button
-          onClick={onReset}
+        <Link
+          href="/chat"
           className="flex-1 py-4 rounded-2xl text-center text-[14px] font-semibold border-2 transition-colors hover:bg-white/30"
           style={{ borderColor: '#21393B', color: '#21393B' }}
         >
           Общайтесь с координатором
-        </button>
+        </Link>
       </div>
 
     </div>

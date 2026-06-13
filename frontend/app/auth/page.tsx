@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/context/LanguageContext';
 import DateInputDMY from '@/components/DateInputDMY';
@@ -26,12 +26,17 @@ import Select, { components } from 'react-select';
 
 import countries from 'i18n-iso-countries';
 import ru from 'i18n-iso-countries/langs/ru.json';
+import en from 'i18n-iso-countries/langs/en.json';
+import ko from 'i18n-iso-countries/langs/ko.json';
 countries.registerLocale(ru);
+countries.registerLocale(en);
+countries.registerLocale(ko);
 
-const options = Object.entries(countries.getNames('ru')).map(([code, name]) => ({
-    value: code,
-    label: name,
-}));
+const countryOptionsByLang = {
+    RU: Object.entries(countries.getNames('ru')).map(([code, name]) => ({ value: code, label: name as string })),
+    EN: Object.entries(countries.getNames('en')).map(([code, name]) => ({ value: code, label: name as string })),
+    KO: Object.entries(countries.getNames('ko')).map(([code, name]) => ({ value: code, label: name as string })),
+};
 
 type Mode = 'login-nick' | 'login-email' | 'forgot-password' | 'register';
 
@@ -88,8 +93,9 @@ function Input({ icon, ...props }: { icon?: string } & React.InputHTMLAttributes
     );
 }
 
-export default function AuthPage() {
-    const { t } = useLanguage();
+function AuthPageInner() {
+    const { t, lang } = useLanguage();
+    const options = countryOptionsByLang[lang];
     const router = useRouter();
     const searchParams = useSearchParams();
     const [mode, setMode] = useState<Mode>(
@@ -552,5 +558,13 @@ export default function AuthPage() {
                 </div>
             </motion.div>
         </div>
+    );
+}
+
+export default function AuthPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen" style={{ backgroundColor: '#C0CEB9' }} />}>
+            <AuthPageInner />
+        </Suspense>
     );
 }
