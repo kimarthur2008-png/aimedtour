@@ -55,6 +55,16 @@ service cloud.firestore {
          isAdmin());
     }
 
+    // ── Чаты с координатором ─────────────────────────────────────────────────
+    // Документ: coordinatorChats/{userId} (один на пользователя)
+    // Пользователь читает/пишет свой чат; консультант и админ — любой.
+    match /coordinatorChats/{userId} {
+      allow read:   if isAuth() && (request.auth.uid == userId || isConsultant() || isAdmin());
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAuth() && (request.auth.uid == userId || isConsultant() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
     // ── Заявки на должность консультанта ─────────────────────────────────────
     match /consultantApplications/{id} {
       allow create: if isAuth() && request.resource.data.userId == request.auth.uid;

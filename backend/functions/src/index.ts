@@ -59,12 +59,26 @@ async function assignCoordinator(consultationId: string) {
 
   const userDoc = await db.collection('users').doc(coordinatorId).get();
   const coordinatorData = userDoc.exists ? (userDoc.data() ?? {}) : {};
+  const coordinatorName = coordinatorData['name'] ?? coordinatorData['fullName'] ?? '';
 
+  // 1. Обновляем заявку
+  const consultSnap = await db.collection('consultations').doc(consultationId).get();
   await db.collection('consultations').doc(consultationId).update({
     coordinatorId,
-    coordinatorName: coordinatorData['name'] ?? coordinatorData['fullName'] ?? '',
+    coordinatorName,
     updatedAt: new Date().toISOString(),
   });
+
+  // 2. Если у пользователя есть чат с координатором — синхронизируем туда же
+  const userId = consultSnap.exists ? (consultSnap.data()?.['userId'] as string | undefined) : undefined;
+  if (userId) {
+    const chatRef = db.collection('coordinatorChats').doc(userId);
+    const chatSnap = await chatRef.get();
+    if (chatSnap.exists) {
+      await chatRef.update({ coordinatorId, coordinatorName, updatedAt: new Date().toISOString() });
+      console.log(`[BE-ASSIGN] coordinatorChats/${userId} → координатор ${coordinatorId}`);
+    }
+  }
 
   console.log(`[BE-ASSIGN] Заявка ${consultationId} → координатор ${coordinatorId}`);
 }
@@ -83,12 +97,12 @@ async function assignCoordinator(consultationId: string) {
 //
 //  Допустимые роли:
 //  - user        — обычный пользователь (по умолчанию при регистрации)
-//  - coordinator — видит только назначенные ему заявки, меняет статус
-//  - admin       — видит всё, назначает координаторов, меняет роли
+//  - consultant  — видит назначенные тикеты и чаты, меняет статус
+//  - admin       — видит всё, назначает консультантов, меняет роли
 //
 //  Пример вызова с фронтенда (admin.html):
 //    const setUserRole = httpsCallable(functions, 'setUserRole');
-//    await setUserRole({ uid: 'abc123', role: 'coordinator' });
+//    await setUserRole({ uid: 'abc123', role: 'consultant' });
 //
 //  ВАЖНО: после смены роли пользователь должен перелогиниться
 //  (или вызвать user.getIdToken(true)), чтобы новый токен применился.
@@ -110,7 +124,7 @@ export const setUserRole = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'uid обязателен и должен быть строкой');
   }
 
-  const ALLOWED_ROLES = ['user', 'coordinator', 'consultant', 'admin'];
+  const ALLOWED_ROLES = ['user', 'consultant', 'admin'];
   if (!ALLOWED_ROLES.includes(role)) {
     throw new HttpsError(
       'invalid-argument',
@@ -161,14 +175,15 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
 
     // ── Шаг 2: отправляем email менеджеру ───────────────────────────────────
     // Экранируем все поля — защита от XSS в HTML письме
-    const name      = escapeHtml(data.name);
-    const email     = escapeHtml(data.email);
-    const rawEmail  = data.email || '';
-    const phone     = escapeHtml(data.phone);
-    const country   = escapeHtml(data.country);
-    const disease   = escapeHtml(data.disease);
-    const message   = escapeHtml(data.message);
-    const id        = escapeHtml(docId);
+    const name        = escapeHtml(data.name);
+    const email       = escapeHtml(data.email);
+    const rawEmail    = data.email || '';
+    const country     = escapeHtml(data.country);
+    const birthDate   = escapeHtml(data.birthDate);
+    const clinicName  = escapeHtml(data.clinicName);
+    const consultDate = escapeHtml(data.consultDate);
+    const message     = escapeHtml(data.message);
+    const id          = escapeHtml(docId);
 
     const htmlBody = `
       <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
@@ -177,19 +192,19 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
         </div>
         <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px">
           <table style="width:100%;border-collapse:collapse">
-            <tr><td style="padding:8px 0;color:#64748b;width:120px">Имя</td>      <td style="padding:8px 0;font-weight:600">${name}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Email</td>     <td style="padding:8px 0"><a href="mailto:${rawEmail}">${email}</a></td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Телефон</td>   <td style="padding:8px 0">${phone}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Страна</td>    <td style="padding:8px 0">${country}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Болезнь</td>   <td style="padding:8px 0">${disease}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Сообщение</td> <td style="padding:8px 0">${message}</td></tr>
-            <tr><td style="padding:8px 0;color:#64748b">Дата</td>      <td style="padding:8px 0;color:#64748b;font-size:13px">${dateStr}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b;width:140px">Имя</td>            <td style="padding:8px 0;font-weight:600">${name}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Email</td>          <td style="padding:8px 0"><a href="mailto:${rawEmail}">${email}</a></td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Страна</td>         <td style="padding:8px 0">${country}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Дата рождения</td>  <td style="padding:8px 0">${birthDate}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Клиника</td>        <td style="padding:8px 0">${clinicName}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Дата консультации</td><td style="padding:8px 0">${consultDate}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Сообщение</td>      <td style="padding:8px 0">${message}</td></tr>
+            <tr><td style="padding:8px 0;color:#64748b">Получено</td>       <td style="padding:8px 0;color:#64748b;font-size:13px">${dateStr}</td></tr>
           </table>
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0">
           <p style="font-size:13px;color:#64748b">
             ID заявки: <code>${id}</code><br>
-            Статус: <strong>new</strong> —
-            <a href="https://abas-d36ca.web.app/admin.html">открыть в Админке</a>
+            Статус: <strong>new</strong>
           </p>
         </div>
       </div>
@@ -198,14 +213,15 @@ export const onNewConsultation = functions.firestore.onDocumentCreated(
     const textBody = [
       'Новая заявка на консультацию — Smart K-Medi',
       '',
-      `Имя:       ${data.name    || '—'}`,
-      `Email:     ${data.email   || '—'}`,
-      `Телефон:   ${data.phone   || '—'}`,
-      `Страна:    ${data.country || '—'}`,
-      `Болезнь:   ${data.disease || '—'}`,
-      `Сообщение: ${data.message || '—'}`,
+      `Имя:              ${data.name        || '—'}`,
+      `Email:            ${data.email       || '—'}`,
+      `Страна:           ${data.country     || '—'}`,
+      `Дата рождения:    ${data.birthDate   || '—'}`,
+      `Клиника:          ${data.clinicName  || '—'}`,
+      `Дата консультации:${data.consultDate || '—'}`,
+      `Сообщение:        ${data.message     || '—'}`,
       '',
-      `Дата: ${dateStr}`,
+      `Получено: ${dateStr}`,
       `ID заявки: ${docId}`,
     ].join('\n');
 
@@ -304,7 +320,7 @@ export const onNewSupportTicket = functions.firestore.onDocumentCreated(
 // ════════════════════════════════════════════════════════════════════════════
 export const updateConsultationStatus = onCall(async (request) => {
   const role = request.auth?.token.role;
-  if (!role || !['admin', 'consultant', 'coordinator'].includes(role)) {
+  if (!role || !['admin', 'consultant'].includes(role)) {
     throw new HttpsError('permission-denied', 'Недостаточно прав для смены статуса');
   }
 

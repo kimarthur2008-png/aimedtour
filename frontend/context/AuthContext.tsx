@@ -5,6 +5,17 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
+const PROFILE_KEY = 'kmt_profile';
+function readCache(): UserProfile | null {
+  try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function writeCache(p: UserProfile) {
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch {}
+}
+function clearCache() {
+  try { localStorage.removeItem(PROFILE_KEY); } catch {}
+}
+
 export type UserRole = 'admin' | 'consultant' | 'user';
 
 export type PendingNotification = {
@@ -41,15 +52,6 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const ADMIN_EMAILS      = ['yeah.sir.228@gmail.com'];
-const CONSULTANT_EMAILS = ['kola.molatilek2008@gmail.com'];
-
-function emailRole(email: string | null | undefined): UserRole | null {
-  if (!email) return null;
-  if (ADMIN_EMAILS.includes(email))      return 'admin';
-  if (CONSULTANT_EMAILS.includes(email)) return 'consultant';
-  return null;
-}
 
 const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, role: null,
@@ -69,15 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const tokenResult = await firebaseUser.getIdTokenResult();
     const claimRole = tokenResult.claims['role'] as UserRole | undefined;
 
-    const privileged = claimRole ?? emailRole(firebaseUser.email);
+    const privileged = claimRole;
     const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
 
     if (snap.exists()) {
       const data = snap.data();
       const resolvedRole: UserRole = privileged ?? (data.role as UserRole) ?? 'user';
-      setProfile({
+      const fresh: UserProfile = {
         uid:                 firebaseUser.uid,
-        // поддержка старых документов с полем "nickname" (созданных через AuthModal)
         nick:                data.nick ?? data.nickname ?? '',
         email:               firebaseUser.email ?? '',
         fullName:            data.fullName ?? data.nickname ?? firebaseUser.displayName ?? '',
@@ -89,17 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role:                resolvedRole,
         pendingNotification: data.pendingNotification ?? null,
         quizResult:          data.quizResult          ?? undefined,
-      });
+      };
+      setProfile(fresh);
+      writeCache(fresh);
       setRole(resolvedRole);
       setRegistered(true);
     } else if (privileged) {
-      setProfile({
+      const fresh: UserProfile = {
         uid: firebaseUser.uid, nick: '',
         email: firebaseUser.email ?? '',
         fullName: firebaseUser.displayName ?? firebaseUser.email ?? '',
         country: '', city: '', phone: '', birthDate: '', createdAt: '',
         role: privileged,
-      });
+      };
+      setProfile(fresh);
+      writeCache(fresh);
       setRole(privileged);
       setRegistered(true);
     } else {
@@ -113,6 +118,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await loadProfile(user);
   };
 
+  // Show cached profile instantly on first paint
+  useEffect(() => {
+    const cached = readCache();
+    if (cached) setProfile(cached);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -122,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
         setRole(null);
         setRegistered(false);
+        clearCache();
       }
       setLoading(false);
     });
