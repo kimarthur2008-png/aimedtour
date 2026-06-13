@@ -307,7 +307,6 @@ const RU = {
     saveError:    'Не удалось сохранить изменения',
     fullName:     'Полное имя',
     country:      'Страна',
-    city:         'Город',
     phone:        'Телефон',
     birthDate:    'Дата рождения',
     logout:       'Выйти',
@@ -336,6 +335,7 @@ const RU = {
     coordinatorAvailable: 'доступен 24/7.',
     coordinatorDefault:  'Наш координатор доступен 24/7.',
     coordinatorCall:     'Координатор по звонкам',
+    chatPh:              'Написать координатору...',
     stageLabels: [
       'Первичная консультация',
       'Проверка медицинских документов',
@@ -354,6 +354,9 @@ const RU = {
       'Лечение завершено. Восстановление и мониторинг продолжаются.',
       'Удалённые консультации с вашей командой по уходу.',
     ],
+    chatWidget:      'Пишите координатору',
+    chatWidgetTitle: 'Чат с координатором',
+    chatFullScreen:  'Открыть на весь экран',
   },
 
   // ── Support ────────────────────────────────────────────────
@@ -489,12 +492,12 @@ const RU = {
   wizard: {
     stepLabels: ['Категория', 'Бюджет', 'Сопровождение', 'Аккредитация', 'Период'] as [string,string,string,string,string],
     steps: [
-      { q: 'Какую область здоровья вы хотели бы доверить корейским специалистам?', sub: 'Выберите направление или выберите из списка' },
-      { q: 'На какой ценовой сегмент медицинских учреждений вы ориентируетесь?',   sub: 'Без учёта перелёта и проживания' },
-      { q: 'Нужен ли переводчик / сопровождение?',                                 sub: 'Мы обеспечиваем полное сопровождение' },
-      { q: 'Важна ли международная аккредитация?',                                 sub: 'JCI — самый строгий международный стандарт' },
-      { q: 'В какой период вы рассматриваете возможность визита в Корею?',          sub: 'Это поможет нам подготовить оптимальное предложение' },
-    ] as [{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string}],
+      { q: 'Какую область здоровья вы хотели бы доверить корейским специалистам?', sub: 'Выберите направление или выберите из списка', sideTitle: 'Ваш AI-координатор',       sideDesc: 'Я анализирую ваши ответы в режиме реального времени, чтобы найти лучшие клиники и сэкономить вам до 40 часов поиска.' },
+      { q: 'На какой ценовой сегмент медицинских учреждений вы ориентируетесь?',   sub: 'Без учёта перелёта и проживания',            sideTitle: 'Определяем ваш бюджет',     sideDesc: 'Бюджет — ключевой фактор. Я использую его, чтобы отфильтровать неподходящие клиники и найти лучшее соотношение цены и качества.' },
+      { q: 'Нужен ли переводчик / сопровождение?',                                 sub: 'Мы обеспечиваем полное сопровождение',        sideTitle: 'Комфортное сопровождение',  sideDesc: 'Языковой барьер — главный страх пациентов. Я подберу клинику с нужной языковой поддержкой, чтобы вы чувствовали себя уверенно.' },
+      { q: 'Важна ли международная аккредитация?',                                 sub: 'JCI — самый строгий международный стандарт',  sideTitle: 'Стандарты качества',        sideDesc: 'Международная аккредитация — знак того, что клиника соответствует строжайшим мировым стандартам безопасности и качества.' },
+      { q: 'В какой период вы рассматриваете возможность визита в Корею?',          sub: 'Это поможет нам подготовить оптимальное предложение', sideTitle: 'Планируем поездку', sideDesc: 'Сроки влияют на выбор клиники и доступность специалистов. Я подберу оптимальные варианты под ваш временной горизонт.' },
+    ] as Array<{q:string;sub:string;sideTitle:string;sideDesc:string}>,
     back:          '← Назад',
     next:          'Продолжить',
     finish:        'Показать результат',
@@ -571,6 +574,60 @@ const RU = {
     privacy:      'Политика конфиденциальности',
     terms:        'Условия предоставления услуг',
     faq:          'FAQ',
+  },
+
+  // ── Admin panel ────────────────────────────────────────────
+  admin: {
+    nav: { tourism: 'Туризм', hospitals: '🏥 Клиники', consultations: '📋 Заявки', users: '👥 Пользователи' },
+    accessDenied: 'Доступ только для администратора',
+    tourism: {
+      title:    'Управление: Туризм и путешествия',
+      tabs:     { cards: 'Карточки', hero: 'Герой-секция' },
+      type:     'Тип', order: 'Порядок (число)', name: 'Название', namePh: 'Дворец Кёнбоккун',
+      desc: 'Описание', descPh: 'Краткое описание места...', imageUrl: 'URL изображения',
+      visible: 'Показывать на сайте', saving: 'Сохранение...', add: 'Добавить',
+      save: 'Сохранить', cancel: 'Отмена', noCards: 'Нет карточек.', hidden: 'скрыто',
+      edit: 'Изменить', delete: 'Удалить', editCard: 'Редактировать карточку', addCard: 'Добавить карточку',
+      hero: 'Герой-секция', heroTitle: 'Заголовок',
+      heroHint: 'Совет: используйте «и» для выделения второй части цветом.',
+      heroSub: 'Подзаголовок', heroBg: 'URL фонового изображения',
+      deleteTitle: 'Удалить карточку?', deleteDesc: 'Это действие нельзя отменить.',
+      filters: { all: 'Все', sights: 'Достопримечательности', food: 'Кулинария', shopping: 'Шопинг' },
+    },
+    consultations: {
+      title: 'Заявки на консультацию', noItems: 'Нет заявок',
+      details: 'Детали заявки', changeStatus: 'Изменить статус:',
+      fields: { name: 'Имя', email: 'Email', country: 'Страна', birth: 'Дата рождения', clinic: 'Клиника', date: 'Дата консульт.', coordinator: 'Координатор', created: 'Создано' },
+      statuses: { new: 'Новая', inProgress: 'В работе', done: 'Завершена' },
+      filterAll: 'Все',
+    },
+    users: {
+      title: 'Пользователи', total: 'Всего:', search: 'Поиск по имени, нику, email...',
+      you: 'Вы', save: 'Сохранить',
+      roleUpdated: 'Роль обновлена. Пользователь должен перелогиниться.',
+      roleFailed:  'Не удалось изменить роль',
+    },
+  },
+
+  // ── Consultant panel ───────────────────────────────────────
+  consultant: {
+    loginTitle: 'Войдите в аккаунт консультанта', login: 'Войти',
+    accessDenied: 'Доступ запрещён', accessDeniedDesc: 'Эта страница доступна только консультантам',
+    title: 'Кабинет консультанта',
+    stats: { open: 'Открытых тикетов', closed: 'Закрытых тикетов', total: 'Всего тикетов' },
+    tabs: { tickets: 'Тикеты', coordination: 'Координация' },
+    tickets: {
+      title: 'Мои тикеты', showClosed: '+ закрытые', all: 'Все',
+      noAssigned: 'Нет назначенных тикетов', noOpen: 'Нет открытых тикетов',
+      open: 'Открыт', closed: 'Закрыт', patient: 'Пациент:', created: 'Создано:',
+      close: 'Закрыть тикет', closing: 'Закрываем...', select: 'Выберите тикет слева',
+    },
+    coordination: {
+      patients: 'Пациенты', newChats: 'Новые', claim: 'Принять чат', claiming: 'Принимаем...',
+      myChats: 'Мои чаты', noChats: 'Нет активных чатов',
+      inputPh: 'Ответить пациенту...', send: 'Отправить', select: 'Выберите пациента слева',
+      patientLabel: 'Пациент',
+    },
   },
 };
 
@@ -863,7 +920,6 @@ const EN: typeof RU = {
     saveError:    'Failed to save changes',
     fullName:     'Full Name',
     country:      'Country',
-    city:         'City',
     phone:        'Phone',
     birthDate:    'Date of Birth',
     logout:       'Sign Out',
@@ -892,6 +948,7 @@ const EN: typeof RU = {
     coordinatorAvailable: 'is available 24/7.',
     coordinatorDefault:  'Our coordinator is available 24/7.',
     coordinatorCall:     'Coordinator on Call',
+    chatPh:              'Message your coordinator...',
     stageLabels: [
       'Initial Consultation',
       'Medical Document Review',
@@ -910,6 +967,9 @@ const EN: typeof RU = {
       'Treatment complete. Recovery and monitoring continue.',
       'Remote consultations with your care team.',
     ],
+    chatWidget:      'Chat with Coordinator',
+    chatWidgetTitle: 'Chat with Coordinator',
+    chatFullScreen:  'Open full screen',
   },
   support: {
     title:          'Technical Support',
@@ -1037,12 +1097,12 @@ const EN: typeof RU = {
   wizard: {
     stepLabels: ['Category', 'Budget', 'Escort', 'Accreditation', 'Timeline'] as [string,string,string,string,string],
     steps: [
-      { q: 'Which area of health would you like to entrust to Korean specialists?', sub: 'Select a direction or choose from the list' },
-      { q: 'What price segment of medical facilities are you targeting?',           sub: 'Excluding flights and accommodation' },
-      { q: 'Do you need a translator / escort?',                                    sub: 'We provide full accompaniment' },
-      { q: 'Is international accreditation important to you?',                      sub: 'JCI is the strictest international standard' },
-      { q: 'When are you considering visiting Korea?',                              sub: 'This will help us prepare the best offer for you' },
-    ] as [{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string}],
+      { q: 'Which area of health would you like to entrust to Korean specialists?', sub: 'Select a direction or choose from the list', sideTitle: 'Your AI Coordinator',      sideDesc: 'I analyse your answers in real time to find the best clinics and save you up to 40 hours of research.' },
+      { q: 'What price segment of medical facilities are you targeting?',           sub: 'Excluding flights and accommodation',        sideTitle: 'Identifying Your Budget',  sideDesc: 'Budget is a key factor. I use it to filter out unsuitable clinics and find the best value for money.' },
+      { q: 'Do you need a translator / escort?',                                    sub: 'We provide full accompaniment',              sideTitle: 'Comfortable Support',      sideDesc: "The language barrier is patients' biggest fear. I'll find a clinic with the right support so you feel confident." },
+      { q: 'Is international accreditation important to you?',                      sub: 'JCI is the strictest international standard', sideTitle: 'Quality Standards',       sideDesc: 'International accreditation signals that a clinic meets the strictest global standards for safety and quality.' },
+      { q: 'When are you considering visiting Korea?',                              sub: 'This will help us prepare the best offer for you', sideTitle: 'Planning Your Trip', sideDesc: "Timing affects clinic availability and specialist schedules. I'll find the best options for your time frame." },
+    ] as Array<{q:string;sub:string;sideTitle:string;sideDesc:string}>,
     back:          '← Back',
     next:          'Continue',
     finish:        'Show Results',
@@ -1117,6 +1177,58 @@ const EN: typeof RU = {
     privacy:      'Privacy Policy',
     terms:        'Terms of Service',
     faq:          'FAQ',
+  },
+
+  admin: {
+    nav: { tourism: 'Tourism', hospitals: '🏥 Hospitals', consultations: '📋 Consultations', users: '👥 Users' },
+    accessDenied: 'Admin access only',
+    tourism: {
+      title: 'Manage: Tourism & Travel',
+      tabs: { cards: 'Cards', hero: 'Hero Section' },
+      type: 'Type', order: 'Order (number)', name: 'Name', namePh: 'Gyeongbokgung Palace',
+      desc: 'Description', descPh: 'Brief description of the place...', imageUrl: 'Image URL',
+      visible: 'Show on site', saving: 'Saving...', add: 'Add',
+      save: 'Save', cancel: 'Cancel', noCards: 'No cards.', hidden: 'hidden',
+      edit: 'Edit', delete: 'Delete', editCard: 'Edit card', addCard: 'Add card',
+      hero: 'Hero Section', heroTitle: 'Title',
+      heroHint: 'Tip: use "and" to highlight the second part in color.',
+      heroSub: 'Subtitle', heroBg: 'Background image URL',
+      deleteTitle: 'Delete card?', deleteDesc: 'This action cannot be undone.',
+      filters: { all: 'All', sights: 'Sights', food: 'Food', shopping: 'Shopping' },
+    },
+    consultations: {
+      title: 'Consultation Requests', noItems: 'No requests',
+      details: 'Request Details', changeStatus: 'Change status:',
+      fields: { name: 'Name', email: 'Email', country: 'Country', birth: 'Date of Birth', clinic: 'Clinic', date: 'Consult Date', coordinator: 'Coordinator', created: 'Created' },
+      statuses: { new: 'New', inProgress: 'In Progress', done: 'Done' },
+      filterAll: 'All',
+    },
+    users: {
+      title: 'Users', total: 'Total:', search: 'Search by name, nick, email...',
+      you: 'You', save: 'Save',
+      roleUpdated: 'Role updated. User must re-login.',
+      roleFailed:  'Failed to change role',
+    },
+  },
+
+  consultant: {
+    loginTitle: 'Sign in to consultant account', login: 'Sign In',
+    accessDenied: 'Access Denied', accessDeniedDesc: 'This page is only available to consultants',
+    title: 'Consultant Panel',
+    stats: { open: 'Open Tickets', closed: 'Closed Tickets', total: 'Total Tickets' },
+    tabs: { tickets: 'Tickets', coordination: 'Coordination' },
+    tickets: {
+      title: 'My Tickets', showClosed: '+ closed', all: 'All',
+      noAssigned: 'No assigned tickets', noOpen: 'No open tickets',
+      open: 'Open', closed: 'Closed', patient: 'Patient:', created: 'Created:',
+      close: 'Close ticket', closing: 'Closing...', select: 'Select a ticket on the left',
+    },
+    coordination: {
+      patients: 'Patients', newChats: 'New', claim: 'Accept chat', claiming: 'Accepting...',
+      myChats: 'My Chats', noChats: 'No active chats',
+      inputPh: 'Reply to patient...', send: 'Send', select: 'Select a patient on the left',
+      patientLabel: 'Patient',
+    },
   },
 };
 
@@ -1409,7 +1521,6 @@ const KO: typeof RU = {
     saveError:    '변경 사항을 저장하지 못했습니다',
     fullName:     '성명',
     country:      '국가',
-    city:         '도시',
     phone:        '전화번호',
     birthDate:    '생년월일',
     logout:       '로그아웃',
@@ -1438,6 +1549,7 @@ const KO: typeof RU = {
     coordinatorAvailable: '24/7 이용 가능합니다.',
     coordinatorDefault:  '담당 코디네이터가 24/7 대기합니다.',
     coordinatorCall:     '전화 코디네이터',
+    chatPh:              '코디네이터에게 메시지 보내기...',
     stageLabels: [
       '초기 상담',
       '의료 서류 검토',
@@ -1456,6 +1568,9 @@ const KO: typeof RU = {
       '치료 완료. 회복 및 모니터링이 계속됩니다.',
       '진료팀과의 원격 상담.',
     ],
+    chatWidget:      '코디네이터에게 연락',
+    chatWidgetTitle: '코디네이터 채팅',
+    chatFullScreen:  '전체 화면으로 열기',
   },
   support: {
     title:          '기술 지원',
@@ -1583,12 +1698,12 @@ const KO: typeof RU = {
   wizard: {
     stepLabels: ['분야', '예산', '동행', '인증', '일정'] as [string,string,string,string,string],
     steps: [
-      { q: '어떤 건강 분야를 한국 전문의에게 맡기고 싶으신가요?',    sub: '방향을 선택하거나 목록에서 고르세요' },
-      { q: '어떤 가격대의 의료 시설을 원하시나요?',               sub: '항공편 및 숙박 비용 제외' },
-      { q: '통역사/동행이 필요하신가요?',                       sub: '완전한 동행 서비스를 제공합니다' },
-      { q: '국제 인증이 중요한가요?',                          sub: 'JCI는 가장 엄격한 국제 표준입니다' },
-      { q: '한국 방문을 언제 고려하고 계신가요?',                  sub: '최적의 제안을 준비하는 데 도움이 됩니다' },
-    ] as [{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string},{q:string;sub:string}],
+      { q: '어떤 건강 분야를 한국 전문의에게 맡기고 싶으신가요?',    sub: '방향을 선택하거나 목록에서 고르세요',       sideTitle: 'AI 코디네이터',   sideDesc: '실시간으로 답변을 분석하여 최적의 병원을 찾고 최대 40시간의 검색 시간을 절약해 드립니다.' },
+      { q: '어떤 가격대의 의료 시설을 원하시나요?',               sub: '항공편 및 숙박 비용 제외',               sideTitle: '예산 파악 중',    sideDesc: '예산은 핵심 요소입니다. 이를 활용해 적합하지 않은 병원을 필터링하고 최고의 가성비를 찾아드립니다.' },
+      { q: '통역사/동행이 필요하신가요?',                       sub: '완전한 동행 서비스를 제공합니다',           sideTitle: '편안한 동행',     sideDesc: '언어 장벽은 환자들의 가장 큰 걱정입니다. 자신감 있게 치료받을 수 있도록 적절한 언어 지원을 갖춘 병원을 찾아드립니다.' },
+      { q: '국제 인증이 중요한가요?',                          sub: 'JCI는 가장 엄격한 국제 표준입니다',         sideTitle: '품질 기준',      sideDesc: '국제 인증은 병원이 글로벌 안전 및 품질 기준을 충족한다는 신뢰의 표시입니다.' },
+      { q: '한국 방문을 언제 고려하고 계신가요?',                  sub: '최적의 제안을 준비하는 데 도움이 됩니다',    sideTitle: '여행 계획',      sideDesc: '일정은 병원 가용성과 전문의 스케줄에 영향을 미칩니다. 귀하의 일정에 맞는 최적의 선택지를 찾아드립니다.' },
+    ] as Array<{q:string;sub:string;sideTitle:string;sideDesc:string}>,
     back:          '← 이전',
     next:          '계속',
     finish:        '결과 보기',
@@ -1663,6 +1778,58 @@ const KO: typeof RU = {
     privacy:      '개인정보 처리방침',
     terms:        '서비스 이용약관',
     faq:          'FAQ',
+  },
+
+  admin: {
+    nav: { tourism: '관광', hospitals: '🏥 병원', consultations: '📋 신청', users: '👥 사용자' },
+    accessDenied: '관리자만 접근 가능합니다',
+    tourism: {
+      title: '관리: 관광 및 여행',
+      tabs: { cards: '카드', hero: '히어로 섹션' },
+      type: '유형', order: '순서 (숫자)', name: '이름', namePh: '경복궁',
+      desc: '설명', descPh: '장소 간략 설명...', imageUrl: '이미지 URL',
+      visible: '사이트에 표시', saving: '저장 중...', add: '추가',
+      save: '저장', cancel: '취소', noCards: '카드가 없습니다.', hidden: '숨김',
+      edit: '수정', delete: '삭제', editCard: '카드 수정', addCard: '카드 추가',
+      hero: '히어로 섹션', heroTitle: '제목',
+      heroHint: '팁: "그리고"를 사용하면 두 번째 부분이 색으로 강조됩니다.',
+      heroSub: '부제목', heroBg: '배경 이미지 URL',
+      deleteTitle: '카드를 삭제하시겠습니까?', deleteDesc: '이 작업은 취소할 수 없습니다.',
+      filters: { all: '전체', sights: '관광지', food: '음식', shopping: '쇼핑' },
+    },
+    consultations: {
+      title: '상담 신청', noItems: '신청이 없습니다',
+      details: '신청 상세', changeStatus: '상태 변경:',
+      fields: { name: '이름', email: '이메일', country: '국가', birth: '생년월일', clinic: '클리닉', date: '상담 날짜', coordinator: '코디네이터', created: '생성일' },
+      statuses: { new: '신규', inProgress: '진행 중', done: '완료' },
+      filterAll: '전체',
+    },
+    users: {
+      title: '사용자', total: '총:', search: '이름, 닉네임, 이메일로 검색...',
+      you: '나', save: '저장',
+      roleUpdated: '역할이 업데이트되었습니다. 사용자는 다시 로그인해야 합니다.',
+      roleFailed:  '역할 변경에 실패했습니다',
+    },
+  },
+
+  consultant: {
+    loginTitle: '컨설턴트 계정으로 로그인', login: '로그인',
+    accessDenied: '접근 거부', accessDeniedDesc: '이 페이지는 컨설턴트만 이용할 수 있습니다',
+    title: '컨설턴트 패널',
+    stats: { open: '열린 티켓', closed: '닫힌 티켓', total: '전체 티켓' },
+    tabs: { tickets: '티켓', coordination: '코디네이션' },
+    tickets: {
+      title: '내 티켓', showClosed: '+ 닫힌 티켓', all: '전체',
+      noAssigned: '배정된 티켓이 없습니다', noOpen: '열린 티켓이 없습니다',
+      open: '열림', closed: '닫힘', patient: '환자:', created: '생성일:',
+      close: '티켓 닫기', closing: '닫는 중...', select: '왼쪽에서 티켓을 선택하세요',
+    },
+    coordination: {
+      patients: '환자', newChats: '신규', claim: '채팅 수락', claiming: '수락 중...',
+      myChats: '내 채팅', noChats: '활성 채팅이 없습니다',
+      inputPh: '환자에게 답장...', send: '전송', select: '왼쪽에서 환자를 선택하세요',
+      patientLabel: '환자',
+    },
   },
 };
 
