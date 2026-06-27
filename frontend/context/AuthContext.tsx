@@ -49,7 +49,8 @@ interface AuthContextType {
   role:           UserRole | null;
   registered:     boolean;
   loading:        boolean;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (forUser?: User) => Promise<void>;
+  patchProfile:   (patch: Partial<UserProfile>) => void;
 }
 
 
@@ -57,6 +58,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null, profile: null, role: null,
   registered: false, loading: true,
   refreshProfile: async () => {},
+  patchProfile: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -114,9 +116,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const refreshProfile = async () => {
-    if (user) await loadProfile(user);
+  const refreshProfile = async (forUser?: User) => {
+    const target = forUser ?? user;
+    if (target) await loadProfile(target);
   };
+
+  function patchProfile(patch: Partial<UserProfile>) {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      writeCache(updated);
+      return updated;
+    });
+  }
 
   // Show cached profile instantly on first paint
   useEffect(() => {
@@ -141,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const contextValue = useMemo(
-      () => ({ user, profile, role, registered, loading, refreshProfile }),
+      () => ({ user, profile, role, registered, loading, refreshProfile, patchProfile }),
       [user, profile, role, registered, loading]
   );
 

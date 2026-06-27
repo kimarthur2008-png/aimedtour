@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { setUserRole } from '@/lib/firebase-consultations';
+
+interface CoordLoad {
+  id:    string;
+  total: number;
+  active: number;
+}
+import { createConsultantInvite } from '@/lib/firebase-consultations';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -18,7 +24,13 @@ interface UserRecord {
   createdAt?: { seconds: number } | string;
 }
 
-const ROLES = ['user', 'consultant', 'admin'];
+interface InviteRecord {
+  id:        string;
+  email:     string;
+  used:      boolean;
+  expiresAt: string;
+  createdAt?: { seconds: number };
+}
 
 const ROLE_COLORS: Record<string, string> = {
   user:       'bg-gray-100 text-gray-700',
@@ -34,9 +46,14 @@ export default function UsersAdminPage() {
 
   const [users,   setUsers]   = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState<string | null>(null);
-  const [pending, setPending] = useState<Record<string, string>>({});
   const [search,  setSearch]  = useState('');
+
+  const [invites,      setInvites]      = useState<InviteRecord[]>([]);
+  const [inviteEmail,  setInviteEmail]  = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteLink,   setInviteLink]   = useState<string | null>(null);
+  const [copied,       setCopied]       = useState(false);
+  const [coordLoads,   setCoordLoads]   = useState<Record<string, CoordLoad>>({});
 
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
@@ -47,19 +64,52 @@ export default function UsersAdminPage() {
     return () => unsub();
   }, []);
 
-  async function handleSaveRole(uid: string) {
-    const newRole = pending[uid];
-    if (!newRole) return;
-    setSaving(uid);
-    try {
-      await setUserRole(uid, newRole);
-      showToast(a.users.roleUpdated, 'success');
-      setPending((p) => { const n = { ...p }; delete n[uid]; return n; });
-    } catch {
-      showToast(a.users.roleFailed, 'error');
-    } finally {
-      setSaving(null);
+  useEffect(() => {
+    const q = query(collection(db, 'consultantInvites'), where('used', '==', false));
+    const unsub = onSnapshot(q, (snap) => {
+      setInvites(snap.docs.map((d) => ({ id: d.id, ...d.data() } as InviteRecord)));
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'consultations'), (snap) => {
+      const loads: Record<string, CoordLoad> = {};
+      snap.docs.forEach((d) => {
+        const cid: string | undefined = d.data().coordinatorId;
+        if (!cid) return;
+        if (!loads[cid]) loads[cid] = { id: cid, total: 0, active: 0 };
+        loads[cid].total++;
+        if (d.data().status !== 'done') loads[cid].active++;
+      });
+      setCoordLoads(loads);
+    });
+    return () => unsub();
+  }, []);
+
+  async function handleSendInvite() {
+    if (!inviteEmail.trim() || !inviteEmail.includes('@')) {
+      showToast('Введите корректный email', 'error');
+      return;
     }
+    setInviteSending(true);
+    setInviteLink(null);
+    try {
+      const url = await createConsultantInvite(inviteEmail.trim());
+      setInviteLink(url);
+      setInviteEmail('');
+    } catch {
+      showToast('Не удалось создать инвайт', 'error');
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!inviteLink) return;
+    await navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   if (myRole !== 'admin') {
@@ -98,6 +148,101 @@ export default function UsersAdminPage() {
           <p className="text-sm opacity-50" style={{ color: '#21393B' }}>{a.users.total} {users.length}</p>
         </div>
 
+        {/* Инвайт консультанта */}
+        <div className="bg-white rounded-2xl p-5 mb-6 border" style={{ borderColor: '#DAE3E8' }}>
+          <p className="font-semibold text-sm mb-3" style={{ color: '#21393B' }}>Пригласить консультанта</p>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSendInvite(); }}
+              placeholder="email@example.com"
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+              style={{ border: '1.5px solid #DAE3E8', color: '#21393B' }}
+            />
+            <button
+              onClick={handleSendInvite}
+              disabled={inviteSending}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-white shrink-0 disabled:opacity-50"
+              style={{ backgroundColor: '#21393B' }}
+            >
+              {inviteSending ? '...' : 'Отправить'}
+            </button>
+          </div>
+
+          {inviteLink && (
+            <div className="mt-4 p-3 rounded-xl" style={{ backgroundColor: '#EDF2EE', border: '1.5px solid #73907E' }}>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#21393B' }}>Ссылка для регистрации — отправьте координатору:</p>
+              <div className="flex gap-2 items-center">
+                <p className="flex-1 text-xs break-all font-mono" style={{ color: '#21393B', opacity: 0.7 }}>{inviteLink}</p>
+                <button
+                  onClick={handleCopy}
+                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors"
+                  style={{ backgroundColor: copied ? '#4CAF50' : '#21393B' }}
+                >
+                  {copied ? 'Скопировано!' : 'Копировать'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {invites.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2">
+              <p className="text-xs opacity-50 font-medium" style={{ color: '#21393B' }}>Ожидают регистрации</p>
+              {invites.map((inv) => {
+                const expired = new Date(inv.expiresAt) < new Date();
+                return (
+                  <div key={inv.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl" style={{ backgroundColor: '#F7FAE8' }}>
+                    <span className="text-sm truncate" style={{ color: '#21393B' }}>{inv.email}</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${expired ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
+                      {expired ? 'истёк' : 'ожидает'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Нагрузка координаторов */}
+        {(() => {
+          const consultants = users.filter(u => u.role === 'consultant');
+          if (consultants.length === 0) return null;
+          return (
+            <div className="bg-white rounded-2xl p-5 mb-6 border" style={{ borderColor: '#DAE3E8' }}>
+              <p className="font-semibold text-sm mb-4" style={{ color: '#21393B' }}>Нагрузка координаторов</p>
+              <div className="flex flex-col gap-3">
+                {consultants.map(u => {
+                  const load = coordLoads[u.id];
+                  const active = load?.active ?? 0;
+                  const total  = load?.total  ?? 0;
+                  const color = active >= 10 ? '#dc2626' : active >= 5 ? '#d97706' : '#16a34a';
+                  return (
+                    <div key={u.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-white text-xs"
+                        style={{ backgroundColor: '#73907E' }}>
+                        {(u.fullName || u.nick || '?')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: '#21393B' }}>{u.fullName || u.nick || '—'}</p>
+                        <p className="text-xs opacity-50 truncate" style={{ color: '#21393B' }}>{u.email}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="text-sm font-bold" style={{ color }}>{active} акт.</p>
+                          <p className="text-[11px] opacity-40" style={{ color: '#21393B' }}>всего {total}</p>
+                        </div>
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Поиск */}
         <input
           value={search}
@@ -115,8 +260,6 @@ export default function UsersAdminPage() {
           <div className="flex flex-col gap-3">
             {filtered.map((u) => {
               const currentRole = u.role ?? 'user';
-              const selectedRole = pending[u.id] ?? currentRole;
-              const isDirty = pending[u.id] !== undefined;
               const isMe = u.id === me?.uid;
 
               return (
@@ -139,30 +282,10 @@ export default function UsersAdminPage() {
                     <p className="text-xs opacity-50 truncate" style={{ color: '#21393B' }}>{u.email}</p>
                   </div>
 
-                  {/* Текущая роль */}
+                  {/* Роль */}
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${ROLE_COLORS[currentRole] ?? 'bg-gray-100 text-gray-700'}`}>
                     {currentRole}
                   </span>
-
-                  {/* Смена роли */}
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => setPending((p) => ({ ...p, [u.id]: e.target.value }))}
-                    disabled={isMe}
-                    className="px-3 py-2 rounded-xl text-sm outline-none shrink-0"
-                    style={{ border: '1.5px solid #DAE3E8', color: '#21393B', backgroundColor: isDirty ? '#FFF9E6' : 'transparent' }}
-                  >
-                    {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-
-                  <button
-                    disabled={!isDirty || saving === u.id || isMe}
-                    onClick={() => handleSaveRole(u.id)}
-                    className="px-4 py-2 rounded-xl text-sm font-medium transition-colors shrink-0 disabled:opacity-30"
-                    style={{ backgroundColor: isDirty ? '#21393B' : '#DAE3E8', color: isDirty ? '#F7FAE8' : '#21393B' }}
-                  >
-                    {saving === u.id ? '...' : a.users.save}
-                  </button>
                 </div>
               );
             })}

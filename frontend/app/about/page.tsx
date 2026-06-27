@@ -4,6 +4,7 @@ import ValueCard from '@/components/about/ValueCard';
 import TeamMember from '@/components/about/TeamMember';
 import { ABOUT_TEAM } from '@/lib/aboutData';
 import { useLanguage } from '@/context/LanguageContext';
+import { Reveal } from '@/components/Reveal';
 
 export default function AboutPage() {
   const { t } = useLanguage();
@@ -60,16 +61,20 @@ export default function AboutPage() {
       {/* ── Ценности ─────────────────────────────────────────────────────── */}
       <section className="bg-[#C7D4D8] lg:bg-[#E8EEF2]">
         <div className="max-w-[1440px] mx-auto px-[clamp(16px,5vw,80px)] py-14 md:py-20">
-          <h2
-            className="text-h2-accent text-center mb-10 md:mb-14"
-            style={{ color: '#46888D' }}
-          >
-            {t.about.valuesHeading}
-          </h2>
+          <Reveal type="fade">
+            <h2
+              className="text-h2-accent text-center mb-10 md:mb-14"
+              style={{ color: '#46888D' }}
+            >
+              {t.about.valuesHeading}
+            </h2>
+          </Reveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
-            {ABOUT_VALUES.map((v) => (
-              <ValueCard key={v.title} title={v.title} description={v.description} icon={v.icon} />
+            {ABOUT_VALUES.map((v, i) => (
+              <Reveal key={v.title} type="up" delay={i * 100}>
+                <ValueCard title={v.title} description={v.description} icon={v.icon} />
+              </Reveal>
             ))}
           </div>
         </div>
@@ -78,16 +83,20 @@ export default function AboutPage() {
       {/* ── Команда ──────────────────────────────────────────────────────── */}
       <section className="bg-[#C7D4D8] lg:bg-[#A3B8C2]">
         <div className="max-w-[1440px] mx-auto px-[clamp(16px,5vw,80px)] py-14 md:py-20">
-          <h2
-            className="text-h2-accent text-center mb-10 md:mb-14"
-            style={{ color: '#21393B' }}
-          >
-            {t.about.teamHeading}
-          </h2>
+          <Reveal type="fade">
+            <h2
+              className="text-h2-accent text-center mb-10 md:mb-14"
+              style={{ color: '#21393B' }}
+            >
+              {t.about.teamHeading}
+            </h2>
+          </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 md:gap-12">
-            {ABOUT_TEAM.map((m) => (
-              <TeamMember key={m.name} name={m.name} role={m.role} image={m.image} />
+            {ABOUT_TEAM.map((m, i) => (
+              <Reveal key={m.name} type="up" delay={i * 100}>
+                <TeamMember name={m.name} role={m.role} image={m.image} />
+              </Reveal>
             ))}
           </div>
         </div>

@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { useTourismAdmin, TourismType, TourismItem, TourismHero } from '@/hooks/useTourism';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -31,6 +34,12 @@ export default function TourismAdminPage() {
     const { items, hero, loading, saving, addItem, updateItem, deleteItem, saveHero } = useTourismAdmin();
     const { t } = useLanguage();
     const a = t.admin;
+    const router = useRouter();
+
+    async function handleLogout() {
+        await signOut(auth);
+        router.push('/');
+    }
 
     const TYPE_LABELS: Record<TourismType, string> = {
         sights:   a.tourism.filters.sights,
@@ -92,7 +101,7 @@ export default function TourismAdminPage() {
             <div className="max-w-[1200px] mx-auto px-[clamp(16px,5vw,60px)] py-10">
 
                 {/* Nav */}
-                <div className="flex flex-wrap gap-3 mb-8">
+                <div className="flex flex-wrap items-center gap-3 mb-8">
                     <span
                         className="px-4 py-2 rounded-xl text-sm font-medium"
                         style={{ backgroundColor: '#21393B', color: '#F7FAE8' }}
@@ -120,6 +129,13 @@ export default function TourismAdminPage() {
                     >
                         {a.nav.users}
                     </Link>
+                    <button
+                        onClick={handleLogout}
+                        className="ml-auto px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:opacity-80"
+                        style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
+                    >
+                        Выйти
+                    </button>
                 </div>
 
                 <h1 className="text-h2 mb-8" style={{ color: '#21393B' }}>

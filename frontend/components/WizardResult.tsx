@@ -1,10 +1,16 @@
+'use client';
+
 import type { MatchedHospital } from '@/hooks/useWizard';
 import Link from 'next/link';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface Props {
-  results: MatchedHospital[];
-  onReset: () => void;
+  results:   MatchedHospital[];
+  onReset:   () => void;
+  savedAt?:  string;
 }
+
+const DATE_LOCALE: Record<string, string> = { RU: 'ru-RU', EN: 'en-US', KO: 'ko-KR' };
 
 const HOSPITAL_SVG = (size = 'w-10 h-10') => (
   <svg className={size} fill="none" viewBox="0 0 24 24" stroke="#73907E" strokeWidth={1.5}>
@@ -12,7 +18,14 @@ const HOSPITAL_SVG = (size = 'w-10 h-10') => (
   </svg>
 );
 
-export default function WizardResult({ results, onReset }: Props) {
+export default function WizardResult({ results, onReset, savedAt }: Props) {
+  const { t, lang } = useLanguage();
+  const w = t.wizard;
+
+  const dateLabel = savedAt
+    ? new Date(savedAt).toLocaleDateString(DATE_LOCALE[lang] ?? 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+
   return (
     <div className="w-full">
 
@@ -24,8 +37,13 @@ export default function WizardResult({ results, onReset }: Props) {
           </svg>
         </div>
         <h2 className="text-xl sm:text-2xl font-bold" style={{ color: '#21393B' }}>
-          Ваши матчи с ИИ готовы
+          {w.resultsTitle}
         </h2>
+        {dateLabel && (
+          <p className="text-sm mt-1 opacity-50" style={{ color: '#21393B' }}>
+            {w.resultsFrom} {dateLabel}
+          </p>
+        )}
       </div>
 
       {/* ── Карточки ──────────────────────────────────────────────────────── */}
@@ -36,66 +54,64 @@ export default function WizardResult({ results, onReset }: Props) {
 
           return (
             <div key={h.id} className="animate-slide-up bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-              <div className="flex">
+              <div className="flex items-stretch">
 
                 {/* Фото — только sm+ */}
-                <div className="hidden sm:flex w-44 shrink-0 bg-[#E8EDE9] items-center justify-center">
+                <div className="hidden sm:block w-44 shrink-0 bg-[#E8EDE9] min-h-50 relative">
                   {photo
-                    ? <img src={photo} alt={h.name} className="w-full h-full object-cover min-h-50" />
-                    : <div className="min-h-50 flex items-center justify-center w-full">{HOSPITAL_SVG()}</div>
+                    ? <img src={photo} alt={h.name} className="absolute inset-0 w-full h-full object-cover" />
+                    : <div className="absolute inset-0 flex items-center justify-center">{HOSPITAL_SVG()}</div>
                   }
                 </div>
 
                 {/* Контент */}
-                <div className="flex-1 p-4 sm:p-5 flex flex-col gap-3">
+                <div className="flex-1 p-4 sm:p-5 flex flex-col gap-3 min-w-0">
 
                   {/* ── MOBILE: иконка + процент ── */}
                   <div className="flex sm:hidden items-start justify-between gap-2">
-                    {/* маленькая иконка / фото */}
                     <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden flex items-center justify-center" style={{ backgroundColor: '#E8EDE9' }}>
                       {photo
                         ? <img src={photo} alt="" className="w-full h-full object-cover" />
                         : HOSPITAL_SVG('w-5 h-5')
                       }
                     </div>
-                    {/* бейдж + % */}
                     <div className="text-right">
                       {i === 0 && (
                         <span className="inline-block text-[10px] font-bold text-white rounded-full px-2 py-0.5 mb-0.5" style={{ backgroundColor: '#4CAF50' }}>
-                          ⚡ ЛУЧШИЙ ВЫБОР
+                          {w.bestChoice}
                         </span>
                       )}
                       <div className="text-[28px] font-extrabold leading-none" style={{ color: '#21393B' }}>{h.matchPercent}%</div>
-                      <div className="text-[9px] uppercase tracking-widest opacity-50" style={{ color: '#21393B' }}>AI совпадение</div>
+                      <div className="text-[9px] uppercase tracking-widest opacity-50" style={{ color: '#21393B' }}>{w.aiMatch}</div>
                     </div>
                   </div>
 
-                  {/* ── MOBILE: название + локация ── */}
+                  {/* ── MOBILE: название ── */}
                   <div className="sm:hidden">
-                    <h3 className="font-bold text-[15px] leading-snug" style={{ color: '#21393B' }}>{h.name}</h3>
-                    <LocationRow h={h} />
+                    <h3 className="font-bold text-[15px] leading-snug wrap-break-word" style={{ color: '#21393B' }}>{h.name}</h3>
+                    <LocationRow h={h} reviews={w.reviews} />
                   </div>
 
-                  {/* ── DESKTOP: название + локация | процент ── */}
+                  {/* ── DESKTOP: название | процент ── */}
                   <div className="hidden sm:flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base leading-snug" style={{ color: '#21393B' }}>{h.name}</h3>
-                      <LocationRow h={h} />
+                      <h3 className="font-bold text-base leading-snug wrap-break-word" style={{ color: '#21393B' }}>{h.name}</h3>
+                      <LocationRow h={h} reviews={w.reviews} />
                     </div>
                     <div className="shrink-0 text-right">
                       {i === 0 && (
                         <span className="inline-block text-[10px] font-bold text-white rounded-full px-2 py-0.5 mb-0.5" style={{ backgroundColor: '#4CAF50' }}>
-                          ⚡ ЛУЧШИЙ ВЫБОР
+                          {w.bestChoice}
                         </span>
                       )}
                       <div className="text-3xl font-extrabold leading-none" style={{ color: '#21393B' }}>{h.matchPercent}%</div>
-                      <div className="text-[9px] uppercase tracking-widest opacity-50" style={{ color: '#21393B' }}>AI совпадение</div>
+                      <div className="text-[9px] uppercase tracking-widest opacity-50" style={{ color: '#21393B' }}>{w.aiMatch}</div>
                     </div>
                   </div>
 
                   {/* ── Почему эта клиника ── */}
-                  <div className="rounded-xl px-3 py-2 text-xs leading-relaxed" style={{ backgroundColor: '#EDF2EE' }}>
-                    <span className="font-semibold" style={{ color: '#2D6A4F' }}>Почему эта клиника: </span>
+                  <div className="w-full rounded-xl px-3 py-2 text-xs leading-relaxed wrap-break-word" style={{ backgroundColor: '#EDF2EE' }}>
+                    <span className="font-semibold" style={{ color: '#2D6A4F' }}>{w.whyClinic}</span>
                     <span style={{ color: '#21393B', opacity: 0.85 }}>{h.description}</span>
                   </div>
 
@@ -105,39 +121,32 @@ export default function WizardResult({ results, onReset }: Props) {
                       {h.priceFrom && (
                         <div className="flex-1 px-2 py-1">
                           <div className="font-bold text-sm" style={{ color: '#21393B' }}>${h.priceFrom.toLocaleString()}</div>
-                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>Цена от</div>
+                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>{w.priceFrom}</div>
                         </div>
                       )}
                       {h.recoveryDays && (
                         <div className="flex-1 px-2 py-1">
                           <div className="font-bold text-sm" style={{ color: '#21393B' }}>{h.recoveryDays}</div>
-                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>Восстановление</div>
+                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>{w.recovery}</div>
                         </div>
                       )}
                       {h.operationsCount && (
                         <div className="flex-1 px-2 py-1">
                           <div className="font-bold text-sm" style={{ color: '#21393B' }}>{h.operationsCount}</div>
-                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>Операций</div>
+                          <div className="text-[9px] uppercase tracking-wide opacity-50 mt-0.5" style={{ color: '#21393B' }}>{w.operations}</div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* ── Кнопки ── */}
-                  <div className="flex items-center gap-3 mt-auto pt-1">
-                    <Link
-                      href="/consult"
-                      className="flex-1 py-2.5 rounded-xl text-center text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
-                      style={{ backgroundColor: '#21393B' }}
-                    >
-                      Записаться на консультацию
-                    </Link>
+                  {/* ── Подробнее ── */}
+                  <div className="mt-auto pt-1">
                     <Link
                       href={`/hospital-page?id=${h.id}`}
-                      className="text-[13px] font-medium whitespace-nowrap hover:underline underline-offset-2"
+                      className="text-[13px] font-medium hover:underline underline-offset-2"
                       style={{ color: '#21393B' }}
                     >
-                      Подробнее
+                      {w.learnMore} →
                     </Link>
                   </div>
 
@@ -148,29 +157,36 @@ export default function WizardResult({ results, onReset }: Props) {
         })}
       </div>
 
-      {/* ── Нижние кнопки ─────────────────────────────────────────────────── */}
+      {/* ── Нижние действия ───────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 mt-8">
         <Link
           href="/consult"
           className="flex-1 py-4 rounded-2xl text-center text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
           style={{ backgroundColor: '#21393B' }}
         >
-          Записаться на консультацию
+          {w.fillForm}
         </Link>
         <Link
           href="/chat"
           className="flex-1 py-4 rounded-2xl text-center text-[14px] font-semibold border-2 transition-colors hover:bg-white/30"
           style={{ borderColor: '#21393B', color: '#21393B' }}
         >
-          Общайтесь с координатором
+          {w.coordinator}
         </Link>
+        <button
+          onClick={onReset}
+          className="flex-1 py-4 rounded-2xl text-center text-[14px] font-semibold transition-colors hover:bg-white/30"
+          style={{ border: '2px solid #21393B', color: '#21393B', opacity: 0.6 }}
+        >
+          {w.retake}
+        </button>
       </div>
 
     </div>
   );
 }
 
-function LocationRow({ h }: { h: MatchedHospital }) {
+function LocationRow({ h, reviews }: { h: MatchedHospital; reviews: string }) {
   if (!h.address && h.certifications.length === 0 && h.rating == null) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1 text-[11px]" style={{ color: '#21393B', opacity: 0.7 }}>
@@ -188,7 +204,7 @@ function LocationRow({ h }: { h: MatchedHospital }) {
       {h.rating != null && (
         <>
           <span className="opacity-40">|</span>
-          <span>⭐ {h.rating}{h.reviewCount != null && ` (${h.reviewCount.toLocaleString()} отзывов)`}</span>
+          <span>⭐ {h.rating}{h.reviewCount != null && ` (${h.reviewCount.toLocaleString()} ${reviews})`}</span>
         </>
       )}
     </div>

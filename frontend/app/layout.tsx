@@ -4,7 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
-import Header from '@/components/Header';
+import HeaderWrapper from '@/components/HeaderWrapper';
 import FooterWrapper from '@/components/FooterWrapper';
 import LanguageBlurWrapper from '@/components/LanguageBlurWrapper';
 import NavigationInterceptor from '@/components/NavigationInterceptor';
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <FloatingChatWidget />
                 <LanguageBlurWrapper>
                   <PageTransitionWrapper>
-                    <Header />
+                    <HeaderWrapper />
                     <main className="flex-1">{children}</main>
                     <FooterWrapper />
                   </PageTransitionWrapper>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { Reveal } from '@/components/Reveal';
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -24,7 +25,7 @@ export default function HomePage() {
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section
-            className="relative w-full overflow-hidden flex items-center"
+            className="relative w-full overflow-hidden flex items-start md:items-center"
             style={{ backgroundColor: '#F7FAE8', minHeight: '807px' }}
         >
           {/* Фото — десктоп */}
@@ -42,7 +43,7 @@ export default function HomePage() {
 
           {/* Контент */}
           <div
-              className="relative z-10 flex flex-col gap-6 py-10 md:py-0 md:max-w-[57%] pl-[clamp(16px,8vw,120px)] pr-[clamp(24px,8vw,120px)]"
+              className="relative z-10 flex flex-col gap-6 pt-8 pb-10 md:py-0 md:max-w-[57%] pl-[clamp(16px,8vw,120px)] pr-[clamp(24px,8vw,120px)]"
           >
             {/* Бейдж */}
             <div
@@ -87,24 +88,22 @@ export default function HomePage() {
 
         {/* ── СТАТИСТИКА ───────────────────────────────────────────────────── */}
         <section className="bg-primary px-[clamp(24px,8vw,120px)] py-16">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-[1440px] mx-auto ">
-            {STATS.map((s) => (
-                <div key={s.value} className="animate-slide-up flex flex-col items-center text-center gap-3">
-                  <div
-                      className="flex items-center justify-center rounded-2xl bg-white w-[92px] h-[88px]"
-                  >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-[1440px] mx-auto">
+            {STATS.map((s, i) => (
+                <Reveal key={s.value} type="up" delay={i * 80} className="flex flex-col items-center text-center gap-3">
+                  <div className="flex items-center justify-center rounded-2xl bg-white w-[92px] h-[88px]">
                     <img src={s.icon} style={{ width: '47px', height: '47px' }} />
                   </div>
                   <div className="text-h2 text-white">{s.value}</div>
                   <div className="text-caption text-white opacity-70">{s.label}</div>
-                </div>
+                </Reveal>
             ))}
           </div>
         </section>
 
         {/* ── ПОЧЕМУ МЫ ────────────────────────────────────────────────────── */}
         <section className="py-16 md:py-24 bg-bg-light px-[clamp(24px,8vw,120px)]">
-          <div className="text-center mb-12 md:mb-16">
+          <Reveal type="fade" className="text-center mb-12 md:mb-16">
             <p className="text-caption mb-4 text-accent">
               {t.home.whyBadge}
             </p>
@@ -114,35 +113,39 @@ export default function HomePage() {
             <p className="text-body leading-relaxed max-w-[600px] mx-auto text-primary-dark/60">
               {t.home.whyDesc}
             </p>
-          </div>
+          </Reveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[1400px] mx-auto">
-            {FEATURES.map((f) => (
-                <div key={f.title} className="animate-slide-up rounded-2xl p-6 flex flex-col gap-4 bg-primary">
+            {FEATURES.map((f, i) => (
+                <Reveal key={f.title} type="up" delay={i * 100} className="rounded-2xl p-6 flex flex-col gap-4 bg-primary">
                   <div className="rounded-2xl w-[52px] h-[52px] bg-white flex items-center justify-center">
                     <img src={f.icon} className="w-[28px] h-[28px]" />
                   </div>
                   <h3 className="text-h3 text-white">{f.title}</h3>
                   <p className="text-caption text-white/70">{f.desc}</p>
-                </div>
+                </Reveal>
             ))}
           </div>
         </section>
 
         {/* ── CTA ──────────────────────────────────────────────────────────── */}
         <section className="py-20 px-6 text-center bg-primary">
-          <h2 className="text-h2-accent text-white mb-4">
-            {t.home.ctaTitleFull}
-          </h2>
-          <p className="text-caption text-white opacity-70 mb-10 max-w-[560px] mx-auto">
-            {t.home.ctaDescFull}
-          </p>
-          <Link
-              href="/quiz"
-              className="inline-block px-10 py-4 rounded-2xl text-[16px] font-semibold transition-opacity hover:opacity-90 bg-bg-light text-primary-dark"
-          >
-            {t.home.ctaBtnFull}
-          </Link>
+          <Reveal type="fade" className="mb-10">
+            <h2 className="text-h2-accent text-white mb-4">
+              {t.home.ctaTitleFull}
+            </h2>
+            <p className="text-caption text-white opacity-70 max-w-[560px] mx-auto">
+              {t.home.ctaDescFull}
+            </p>
+          </Reveal>
+          <Reveal type="up" delay={120}>
+            <Link
+                href="/quiz"
+                className="inline-block px-10 py-4 rounded-2xl text-[16px] font-semibold transition-opacity hover:opacity-90 bg-bg-light text-primary-dark"
+            >
+              {t.home.ctaBtnFull}
+            </Link>
+          </Reveal>
         </section>
 
       </div>

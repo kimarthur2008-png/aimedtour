@@ -8,11 +8,12 @@ export interface Hospital {
   specializations: string[];
   certifications: string[];
   description: string;
+  descriptionI18n?: { RU?: string; EN?: string; KO?: string };
+  fullDescription?: string;
+  fullDescriptionI18n?: { RU?: string; EN?: string; KO?: string };
   logoUrl?: string;
   // ценовой тир: 'economy' | 'mid' | 'premium' | 'luxury'
   priceRange?: string;
-  // расширенные поля — заполняются в админке, необязательны
-  fullDescription?: string;
   address?: string;
   phone?: string;
   email?: string;
