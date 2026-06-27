@@ -29,6 +29,37 @@ function CategoryStep({ stepId, selected, onSelect, tLabel, other, selectSpec }:
     const ref = useRef<HTMLDivElement>(null);
     const isOtherSelected = selected && !CATEGORY_PRIMARY.some((p) => p.label === selected);
 
+    // Иконка кнопки «Другое» с анимацией замены
+    const MORE_ICON = '/icons/wizard/more.png';
+    const initIcon = CATEGORY_OTHER.find((o) => o.label === selected)?.icon ?? MORE_ICON;
+    const shownIconRef = useRef(initIcon);
+    const [shownIcon, setShownIcon] = useState(initIcon);
+    const [flipping, setFlipping] = useState(false);
+    const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    function animateToIcon(next: string) {
+        if (next === shownIconRef.current) return;
+        if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+        setFlipping(true);
+        flipTimerRef.current = setTimeout(() => {
+            shownIconRef.current = next;
+            setShownIcon(next);
+            setFlipping(false);
+        }, 180);
+    }
+
+    function handleSelectOther(label: string) {
+        onSelect(stepId, label);
+        setOpen(false);
+        animateToIcon(CATEGORY_OTHER.find((o) => o.label === label)?.icon ?? MORE_ICON);
+    }
+
+    function handleSelectPrimary(label: string) {
+        onSelect(stepId, label);
+        setOpen(false);
+        animateToIcon(MORE_ICON);
+    }
+
     useEffect(() => {
         function handler(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -42,7 +73,7 @@ function CategoryStep({ stepId, selected, onSelect, tLabel, other, selectSpec }:
             {CATEGORY_PRIMARY.map((opt) => (
                 <button
                     key={opt.label}
-                    onClick={() => { onSelect(stepId, opt.label); setOpen(false); }}
+                    onClick={() => handleSelectPrimary(opt.label)}
                     className="flex flex-col items-center gap-2 p-5 rounded-2xl text-sm font-medium transition-all text-center hover:scale-[1.03] active:scale-[0.98]"
                     style={{
                         border:     selected === opt.label ? '1px solid #4C6D7C' : '1px solid #C8D5C2',
@@ -50,7 +81,7 @@ function CategoryStep({ stepId, selected, onSelect, tLabel, other, selectSpec }:
                         color:      selected === opt.label ? '#21393B' : '#3D5A52',
                     }}
                 >
-                    <img src={opt.icon} alt="" className="w-8 h-8" />
+                    <img src={opt.icon} alt="" className="w-14 h-14" />
                     <span>{tLabel(opt.label)}</span>
                 </button>
             ))}
@@ -65,7 +96,16 @@ function CategoryStep({ stepId, selected, onSelect, tLabel, other, selectSpec }:
                         color:      isOtherSelected ? '#21393B' : '#3D5A52',
                     }}
                 >
-                    <span className="text-2xl">⋯</span>
+                    <img
+                        src={shownIcon}
+                        alt=""
+                        className="w-14 h-14"
+                        style={{
+                            opacity:    flipping ? 0 : 1,
+                            transform:  flipping ? 'scale(0.35) rotate(20deg)' : 'scale(1) rotate(0deg)',
+                            transition: 'opacity 180ms ease-out, transform 180ms ease-out',
+                        }}
+                    />
                     <span className="flex items-center gap-1">
                         {isOtherSelected ? tLabel(selected) : other}
                         <svg className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -86,7 +126,7 @@ function CategoryStep({ stepId, selected, onSelect, tLabel, other, selectSpec }:
                             {CATEGORY_OTHER.map((opt) => (
                                 <button
                                     key={opt.label}
-                                    onClick={() => { onSelect(stepId, opt.label); setOpen(false); }}
+                                    onClick={() => handleSelectOther(opt.label)}
                                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors"
                                     style={{
                                         background: selected === opt.label ? 'rgba(76,109,124,0.08)' : 'transparent',
@@ -242,7 +282,7 @@ function OptionsGrid({ stepId, options, selected, onSelect, tLabel }: {
                             background: selected === opt.label ? 'rgba(76,109,124,0.08)' : '#fff',
                             color:      selected === opt.label ? '#21393B' : '#3D5A52',
                         }}>
-                    <img src={opt.icon} alt="" className="w-8 h-8" />
+                    <img src={opt.icon} alt="" className="w-14 h-14" />
                     <span>{tLabel(opt.label)}</span>
                 </button>
             ))}
@@ -319,7 +359,7 @@ export default function Wizard({ step, totalSteps, currentStep, answers, isLastS
 
     return (
         <div className="w-full flex flex-col items-center justify-center py-10 px-4"
-             style={{ minHeight: 'calc(100vh - 76px)', background: '#C0CEB9', paddingBottom: '160px' }}>
+             style={{ minHeight: 'calc(100vh - 76px)', background: '#C0CEB9', paddingBottom: '80px' }}>
 
             <ProgressBar step={step} totalSteps={totalSteps} stepLabels={t.wizard.stepLabels} />
 

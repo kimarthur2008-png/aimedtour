@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +20,7 @@ export default function FloatingChatWidget() {
   const { t } = useLanguage();
   const p = t.profile;
 
+  const router = useRouter();
   const [isOpen,  setIsOpen]  = useState(false);
   const [hovered, setHovered] = useState(false);
   const [chat,    setChat]    = useState<CoordinatorChat | null>(null);
@@ -57,7 +58,7 @@ export default function FloatingChatWidget() {
     }
   }
 
-  if (excluded || !user) return null;
+  if (excluded || !user || profile?.role === 'admin' || profile?.role === 'consultant') return null;
 
   const hasMessages = (chat?.messages?.length ?? 0) > 0;
 
@@ -196,8 +197,11 @@ export default function FloatingChatWidget() {
       <div className="flex justify-end">
         {/* Chat trigger button with hover-expand label */}
         <button
-          onClick={() => setIsOpen((v) => !v)}
-          onMouseEnter={() => setHovered(true)}
+          onClick={() => {
+            if (window.innerWidth < 1024) { router.push('/chat'); return; }
+            setIsOpen((v) => !v);
+          }}
+          onMouseEnter={() => window.matchMedia('(hover: hover)').matches && setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           className="relative flex items-center h-12 rounded-full overflow-hidden ml-auto"
           style={{ backgroundColor: '#21393B', paddingLeft: '14px', paddingRight: '14px' }}

@@ -18,6 +18,7 @@ import {
     query, collection, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -95,6 +96,7 @@ function Input({ icon, ...props }: { icon?: string } & React.InputHTMLAttributes
 
 function AuthPageInner() {
     const { t, lang } = useLanguage();
+    const { refreshProfile } = useAuth();
     const options = countryOptionsByLang[lang];
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -206,14 +208,22 @@ function AuthPageInner() {
         if (!country || !birthDate) { setError(t.auth.errFillAll); return; }
         setLoading(true); setError(''); setNickError('');
         try {
-            if (!(await isNickUnique(regNick.trim()))) { setNickError(t.auth.errUsernameTaken); setLoading(false); return; }
+            // Создаём Auth-аккаунт первым — это аутентифицирует пользователя,
+            // после чего Firestore-запрос на уникальность ника пройдёт правила.
             const cred = await createUserWithEmailAndPassword(auth, regEmail, regPass);
+            if (!(await isNickUnique(regNick.trim()))) {
+                await cred.user.delete();
+                setNickError(t.auth.errUsernameTaken);
+                setLoading(false);
+                return;
+            }
             await updateProfile(cred.user, { displayName: fullName });
             await setDoc(doc(db, 'users', cred.user.uid), {
                 nick: regNick.toLowerCase(), email: regEmail, fullName,
                 country, phone: phone || '', birthDate,
                 role: 'user', createdAt: serverTimestamp(),
             });
+            await refreshProfile(cred.user);
             router.push('/');
         } catch (e: any) {
             if (e.code === 'auth/email-already-in-use') setError(t.auth.errEmailTaken);

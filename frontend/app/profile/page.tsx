@@ -148,9 +148,9 @@ export default function ProfilePage() {
   const [chat, setChat] = useState<CoordinatorChat | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || role !== 'user') return;
     return onCoordinatorChatUpdated(user.uid, setChat);
-  }, [user]);
+  }, [user, role]);
 
   const [editing,   setEditing]   = useState(false);
   const [saving,    setSaving]    = useState(false);
@@ -389,7 +389,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>{t.profile.country}</label>
-                  <Select
+                  <Select<OptionType>
                     instanceId="profile-country"
                     options={countryOptions}
                     placeholder={t.auth.countryPh}
@@ -549,33 +549,35 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* ── Чат с координатором ──────────────────── */}
-            <Link href="/chat" className="bg-white rounded-3xl overflow-hidden hover:opacity-90 transition-opacity block">
-              <div className="px-5 py-4 flex items-center gap-3" style={{ backgroundColor: '#2D4A3E' }}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#73907E' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            {/* ── Чат с координатором — только для пациентов ── */}
+            {role === 'user' && (
+              <Link href="/chat" className="bg-white rounded-3xl overflow-hidden hover:opacity-90 transition-opacity block">
+                <div className="px-5 py-4 flex items-center gap-3" style={{ backgroundColor: '#2D4A3E' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#73907E' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-white text-sm">{t.profile.coordinator}</p>
+                    <p className="text-xs text-white/60">{chat?.coordinatorName ?? t.profile.toBeDetermined}</p>
+                  </div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4 opacity-60">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-white text-sm">{t.profile.coordinator}</p>
-                  <p className="text-xs text-white/60">{chat?.coordinatorName ?? t.profile.toBeDetermined}</p>
+                <div className="px-5 py-4 flex items-center justify-between gap-3">
+                  <p className="text-sm opacity-50" style={{ color: '#21393B' }}>
+                    {chat && chat.messages.length > 0
+                      ? chat.messages[chat.messages.length - 1].text
+                      : t.profile.coordinatorDefault}
+                  </p>
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-xl shrink-0" style={{ backgroundColor: '#21393B', color: '#F7FAE8' }}>
+                    Написать
+                  </span>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4 opacity-60">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-              <div className="px-5 py-4 flex items-center justify-between gap-3">
-                <p className="text-sm opacity-50" style={{ color: '#21393B' }}>
-                  {chat && chat.messages.length > 0
-                    ? chat.messages[chat.messages.length - 1].text
-                    : t.profile.coordinatorDefault}
-                </p>
-                <span className="text-xs font-semibold px-3 py-1.5 rounded-xl shrink-0" style={{ backgroundColor: '#21393B', color: '#F7FAE8' }}>
-                  Написать
-                </span>
-              </div>
-            </Link>
+              </Link>
+            )}
           </div>
         </div>
       </div>
