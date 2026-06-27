@@ -4,11 +4,13 @@ import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigation } from '@/context/NavigationContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function NavigationInterceptor() {
   const router   = useRouter();
   const pathname = usePathname();
   const { isNavigating, startFadeOut, startNavigation, endNavigation } = useNavigation();
+  const { t } = useLanguage();
   const prevPath  = useRef(pathname);
   const startedAt = useRef<number>(0);
   const MIN_MS = 2200;
@@ -102,7 +104,7 @@ export default function NavigationInterceptor() {
               style={{ borderColor: '#DAE3E8', borderTopColor: '#73907E' }}
             />
             <p className="text-sm font-medium" style={{ color: '#21393B', opacity: 0.6 }}>
-              Загрузка...
+              {t.common.loading}
             </p>
           </motion.div>
         </motion.div>

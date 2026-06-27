@@ -2,6 +2,7 @@
 
 import { useTourism } from '@/hooks/useTourism';
 import { useLanguage } from '@/context/LanguageContext';
+import { Reveal } from '@/components/Reveal';
 
 const SECTION_ICONS: Record<string, string> = {
     sights:   '/icons/tourism/sights.svg',
@@ -45,7 +46,7 @@ function SectionBlock({
     if (items.length === 0) return null;
     return (
         <section className="mb-14">
-            <div className="flex items-center gap-3 mb-6">
+            <Reveal type="fade" className="flex items-center gap-3 mb-6">
                 <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                     style={{ backgroundColor: type === 'sights' ? '#E8F4F8' : type === 'food' ? '#FFF3E8' : '#F0EBF8' }}
@@ -53,10 +54,12 @@ function SectionBlock({
                     <img src={SECTION_ICONS[type]} alt="" className="w-5 h-5" />
                 </div>
                 <h2 className="text-h2" style={{ color: '#21393B' }}>{label}</h2>
-            </div>
+            </Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {items.map((item) => (
-                    <TourCard key={item.id} item={item} />
+                {items.map((item, i) => (
+                    <Reveal key={item.id} type="up" delay={Math.min(i % 3, 2) * 90}>
+                        <TourCard item={item} />
+                    </Reveal>
                 ))}
             </div>
         </section>
@@ -84,24 +87,11 @@ export default function TripPage() {
                 )}
                 <div className="relative z-10 text-center px-6 max-w-[700px]">
                     <h1 className="text-h1 text-white mb-4">
-                        {hero?.heroTitle
-                            ? (() => {
-                                const parts = hero.heroTitle.split(' и ');
-                                return parts.length === 2 ? (
-                                    <>
-                                        {parts[0]} и{' '}
-                                        <span style={{ color: '#73907E' }}>{parts[1]}</span>
-                                    </>
-                                ) : hero.heroTitle;
-                            })()
-                            : <>
-                                {t.trip.heroFallbackTitle.replace(t.trip.heroFallbackHighlight, '').trimEnd()}{' '}
-                                <span style={{ color: '#21393B' }}>{t.trip.heroFallbackHighlight}</span>
-                              </>
-                        }
+                        {t.trip.heroFallbackTitle.replace(t.trip.heroFallbackHighlight, '').trimEnd()}{' '}
+                        <span style={{ color: '#21393B' }}>{t.trip.heroFallbackHighlight}</span>
                     </h1>
                     <p className="text-body text-white/80">
-                        {hero?.heroSubtitle || t.trip.heroFallbackDesc}
+                        {t.trip.heroFallbackDesc}
                     </p>
                 </div>
             </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useHospitals } from '@/hooks/useHospitals';
 import HospitalCard from '@/components/HospitalCard';
 import { useLanguage } from '@/context/LanguageContext';
+import { Reveal } from '@/components/Reveal';
 
 const PAGE_SIZE = 9;
 
@@ -17,14 +18,14 @@ export default function HospitalsPage() {
             <div className="max-w-[1440px] mx-auto px-[clamp(16px,5vw,80px)] py-12 md:py-16">
 
                 {/* Заголовок */}
-                <div className="mb-10 md:mb-14 flex flex-col items-center text-center">
+                <Reveal type="fade" className="mb-10 md:mb-14 flex flex-col items-center text-center">
                     <h1 className="text-h1 mb-3">
                         <span style={{ color: '#3D616D' }}>{t.hospitals.heroTitle}</span>
                     </h1>
                     <p className="text-body-acc max-w-[720px] mx-auto" style={{ color: '#3D616D', opacity: 0.7 }}>
                         {t.hospitals.heroDesc}
                     </p>
-                </div>
+                </Reveal>
 
                 {/* Скелетон */}
                 {loading && (
@@ -51,8 +52,10 @@ export default function HospitalsPage() {
                 {!loading && !error && hospitals.length > 0 && (
                     <>
                         <div className="flex flex-col gap-5">
-                            {hospitals.slice(0, displayCount).map((h) => (
-                                <HospitalCard key={h.id} hospital={h} />
+                            {hospitals.slice(0, displayCount).map((h, i) => (
+                                <Reveal key={h.id} type="up" delay={Math.min(i, 2) * 80}>
+                                    <HospitalCard hospital={h} />
+                                </Reveal>
                             ))}
                         </div>
 

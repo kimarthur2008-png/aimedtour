@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import DateInputDMY from '@/components/DateInputDMY';
-import { useRouter } from 'next/navigation';
-import { doc, setDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { doc, setDoc, getDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
+import { acceptConsultantInvite } from '@/lib/firebase-consultations';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Select, { components } from 'react-select';
@@ -56,7 +57,144 @@ function Input({ icon, ...props }: { icon?: string } & React.InputHTMLAttributes
     );
 }
 
+// ── Форма принятия инвайта консультанта ──────────────────────────────────────
+function InviteForm({ token }: { token: string }) {
+    const router = useRouter();
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteValid, setInviteValid] = useState<boolean | null>(null);
+    const [inviteError, setInviteError] = useState('');
+    const [fullName,    setFullName]    = useState('');
+    const [password,    setPassword]    = useState('');
+    const [confirm,     setConfirm]     = useState('');
+    const [loading,     setLoading]     = useState(false);
+    const [formError,   setFormError]   = useState('');
+
+    useEffect(() => {
+        getDoc(doc(db, 'consultantInvites', token)).then((snap) => {
+            if (!snap.exists()) { setInviteValid(false); setInviteError('Инвайт не найден.'); return; }
+            const d = snap.data();
+            if (d.used) { setInviteValid(false); setInviteError('Этот инвайт уже был использован.'); return; }
+            if (new Date(d.expiresAt as string) < new Date()) {
+                setInviteValid(false);
+                setInviteError('Срок действия инвайта истёк. Попросите администратора отправить новый.');
+                return;
+            }
+            setInviteEmail(d.email as string);
+            setInviteValid(true);
+        }).catch(() => { setInviteValid(false); setInviteError('Не удалось проверить инвайт.'); });
+    }, [token]);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setFormError('');
+        if (!fullName.trim())   { setFormError('Введите имя'); return; }
+        if (password.length < 6) { setFormError('Пароль — минимум 6 символов'); return; }
+        if (password !== confirm) { setFormError('Пароли не совпадают'); return; }
+        setLoading(true);
+        try {
+            await acceptConsultantInvite(token, password, fullName.trim());
+            router.replace('/consultant-panel');
+        } catch (err: unknown) {
+            setFormError(err instanceof Error ? err.message : 'Ошибка. Попробуйте позже.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    if (inviteValid === null) {
+        return (
+            <div className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#F7FAE8' }}>
+                <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#73907E', borderTopColor: 'transparent' }} />
+            </div>
+        );
+    }
+
+    if (!inviteValid) {
+        return (
+            <div className="min-h-dvh flex items-center justify-center px-4" style={{ backgroundColor: '#F7FAE8' }}>
+                <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#FEE2E2' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <p className="font-semibold text-base mb-2" style={{ color: '#21393B' }}>Ссылка недействительна</p>
+                    <p className="text-sm opacity-60" style={{ color: '#21393B' }}>{inviteError}</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-dvh flex items-center justify-center px-4 py-10" style={{ backgroundColor: '#F7FAE8' }}>
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full">
+                <div className="mb-6 text-center">
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#2D4A3E' }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <h1 className="font-bold text-xl mb-1" style={{ color: '#21393B' }}>Вы приглашены</h1>
+                    <p className="text-sm opacity-60" style={{ color: '#21393B' }}>Регистрация консультанта Smart K-Medi</p>
+                </div>
+
+                <div className="mb-4 px-4 py-3 rounded-2xl text-sm" style={{ backgroundColor: '#F0F4F0' }}>
+                    <span className="opacity-50 text-xs block mb-0.5">Email</span>
+                    <span className="font-medium" style={{ color: '#21393B' }}>{inviteEmail}</span>
+                </div>
+
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    <div>
+                        <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>Ваше имя</label>
+                        <input value={fullName} onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Иван Иванов" autoComplete="name"
+                            className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                            style={{ border: '1.5px solid #DAE3E8', color: '#21393B' }} />
+                    </div>
+                    <div>
+                        <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>Пароль</label>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Минимум 6 символов" autoComplete="new-password"
+                            className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                            style={{ border: '1.5px solid #DAE3E8', color: '#21393B' }} />
+                    </div>
+                    <div>
+                        <label className="text-xs opacity-60 mb-1 block" style={{ color: '#21393B' }}>Повторите пароль</label>
+                        <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                            placeholder="Повторите пароль" autoComplete="new-password"
+                            className="w-full rounded-2xl px-4 py-3 text-sm outline-none"
+                            style={{ border: '1.5px solid #DAE3E8', color: '#21393B' }} />
+                    </div>
+                    {formError && <p className="text-xs text-red-500 px-1">{formError}</p>}
+                    <button type="submit" disabled={loading}
+                        className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white mt-1 disabled:opacity-50"
+                        style={{ backgroundColor: '#21393B' }}>
+                        {loading ? 'Регистрация...' : 'Завершить регистрацию'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ── Роутер: инвайт или завершение Google-профиля ─────────────────────────────
+function CompleteRegistrationInner() {
+    const searchParams = useSearchParams();
+    const inviteToken = searchParams.get('invite');
+    if (inviteToken) return <InviteForm token={inviteToken} />;
+    return <ProfileCompleteForm />;
+}
+
 export default function CompleteRegistrationPage() {
+    return (
+        <Suspense>
+            <CompleteRegistrationInner />
+        </Suspense>
+    );
+}
+
+// ── Завершение профиля после Google-входа ────────────────────────────────────
+function ProfileCompleteForm() {
     const { user, profile, loading, refreshProfile } = useAuth();
     const router = useRouter();
 
@@ -109,7 +247,8 @@ export default function CompleteRegistrationPage() {
             });
             await refreshProfile();
             router.push('/');
-        } catch {
+        } catch (err) {
+            console.error('handleSubmit error:', err);
             setError('Ошибка сохранения, попробуйте снова');
         } finally {
             setSaving(false);

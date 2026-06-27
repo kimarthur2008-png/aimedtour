@@ -5,6 +5,39 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '
 import { db } from '@/lib/firebase';
 import { useHospitals, type Hospital } from '@/hooks/useHospitals';
 import Link from 'next/link';
+import { useLanguage } from '@/context/LanguageContext';
+
+import { SPEC_KEYS, SPEC_LABELS } from '@/lib/specs';
+
+function SpecPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    const selected = value.split(',').map((s) => s.trim()).filter(Boolean);
+    function toggle(key: string) {
+        const next = selected.includes(key)
+            ? selected.filter((s) => s !== key)
+            : [...selected, key];
+        onChange(next.join(', '));
+    }
+    return (
+        <div className="flex flex-wrap gap-2 p-3 rounded-xl" style={{ border: '1.5px solid #DAE3E8', backgroundColor: 'white', minHeight: '48px' }}>
+            {SPEC_KEYS.map((key) => {
+                const active = selected.includes(key);
+                return (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggle(key)}
+                        className="px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                        style={active
+                            ? { backgroundColor: '#21393B', color: '#F7FAE8' }
+                            : { backgroundColor: '#F0F2EE', color: '#21393B' }}
+                    >
+                        {SPEC_LABELS[key].RU}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
 
 const EMPTY_FORM = {
     name:            '',
@@ -43,15 +76,23 @@ const inputStyle = { border: '1.5px solid #DAE3E8', color: '#21393B', background
 
 export default function HospitalsAdminPage() {
     const { hospitals, loading } = useHospitals();
-    const [saving,  setSaving]  = useState(false);
-    const [confirm, setConfirm] = useState<string | null>(null);
-    const [editId,  setEditId]  = useState<string | null>(null);
-    const [form,    setForm]    = useState<FormState>(EMPTY_FORM);
-    const [search,  setSearch]  = useState('');
+    const { t } = useLanguage();
+    const ah = t.admin.hospitals;
+    const [saving,    setSaving]    = useState(false);
+    const [confirm,   setConfirm]   = useState<string | null>(null);
+    const [editId,    setEditId]    = useState<string | null>(null);
+    const [form,      setForm]      = useState<FormState>(EMPTY_FORM);
+    const [search,    setSearch]    = useState('');
+    const [photos,    setPhotos]    = useState<string[]>([]);
+    const [descLang,  setDescLang]  = useState<'RU' | 'EN' | 'KO'>('RU');
+    const [descI18n,  setDescI18n]  = useState({ RU: '', EN: '', KO: '' });
+    const [fullDescI18n, setFullDescI18n] = useState({ RU: '', EN: '', KO: '' });
 
     function set(field: keyof FormState, value: string) {
         setForm((f) => ({ ...f, [field]: value }));
     }
+
+    const EMPTY_I18N = { RU: '', EN: '', KO: '' };
 
     function startEdit(h: Hospital) {
         setEditId(h.id);
@@ -70,22 +111,43 @@ export default function HospitalsAdminPage() {
             beds:            h.beds      ? String(h.beds)    : '',
             doctors:         h.doctors   ? String(h.doctors) : '',
         });
+        setDescI18n({
+            RU: h.descriptionI18n?.RU ?? h.description ?? '',
+            EN: h.descriptionI18n?.EN ?? '',
+            KO: h.descriptionI18n?.KO ?? '',
+        });
+        setFullDescI18n({
+            RU: h.fullDescriptionI18n?.RU ?? h.fullDescription ?? '',
+            EN: h.fullDescriptionI18n?.EN ?? '',
+            KO: h.fullDescriptionI18n?.KO ?? '',
+        });
+        setPhotos(h.photos ?? []);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function cancelEdit() {
         setEditId(null);
         setForm(EMPTY_FORM);
+        setDescI18n(EMPTY_I18N);
+        setFullDescI18n(EMPTY_I18N);
+        setPhotos([]);
     }
+
+    function addPhoto() { setPhotos(p => [...p, '']); }
+    function removePhoto(i: number) { setPhotos(p => p.filter((_, idx) => idx !== i)); }
+    function updatePhoto(i: number, val: string) { setPhotos(p => p.map((u, idx) => idx === i ? val : u)); }
 
     function buildPayload() {
         return {
-            name:            form.name.trim(),
-            description:     form.description.trim(),
-            fullDescription: form.fullDescription.trim(),
+            name:                form.name.trim(),
+            description:         descI18n.RU.trim() || form.description.trim(),
+            descriptionI18n:     { RU: descI18n.RU.trim(), EN: descI18n.EN.trim(), KO: descI18n.KO.trim() },
+            fullDescription:     fullDescI18n.RU.trim() || form.fullDescription.trim(),
+            fullDescriptionI18n: { RU: fullDescI18n.RU.trim(), EN: fullDescI18n.EN.trim(), KO: fullDescI18n.KO.trim() },
             specializations: splitTags(form.specializations),
             certifications:  splitTags(form.certifications),
             logoUrl:         form.logoUrl.trim()  || null,
+            photos:          photos.map(u => u.trim()).filter(Boolean),
             address:         form.address.trim()  || null,
             phone:           form.phone.trim()    || null,
             email:           form.email.trim()    || null,
@@ -97,7 +159,7 @@ export default function HospitalsAdminPage() {
     }
 
     async function handleSubmit() {
-        if (!form.name.trim() || !form.description.trim()) return;
+        if (!form.name.trim() || !descI18n.RU.trim()) return;
         setSaving(true);
         try {
             if (editId) {
@@ -110,6 +172,9 @@ export default function HospitalsAdminPage() {
                 });
             }
             setForm(EMPTY_FORM);
+            setDescI18n(EMPTY_I18N);
+            setFullDescI18n(EMPTY_I18N);
+            setPhotos([]);
         } finally {
             setSaving(false);
         }
@@ -136,80 +201,93 @@ export default function HospitalsAdminPage() {
                 {/* Шапка */}
                 <div className="flex items-center gap-4 mb-8">
                     <Link href="/admin-panel" className="text-caption hover:underline" style={{ color: '#4C6D7C' }}>
-                        ← Назад
+                        ←
                     </Link>
-                    <h1 className="text-h2" style={{ color: '#21393B' }}>Управление клиниками</h1>
+                    <h1 className="text-h2" style={{ color: '#21393B' }}>{ah.title}</h1>
                 </div>
 
                 {/* ── Форма ───────────────────────────────────────────────── */}
                 <div className="bg-white rounded-2xl p-6 mb-8" style={{ border: '1.5px solid #DAE3E8' }}>
                     <h2 className="text-h4 mb-6" style={{ color: '#21393B' }}>
-                        {editId ? 'Редактировать клинику' : 'Добавить клинику'}
+                        {editId ? ah.save : ah.add}
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                        <Field label="Название *" hint="Официальное название клиники">
+                        <Field label={ah.name} hint={ah.nameHint}>
                             <input className={inputCls} style={inputStyle}
                                    placeholder="Asan Medical Center"
                                    value={form.name} onChange={(e) => set('name', e.target.value)} />
                         </Field>
 
-                        <Field label="Год основания">
+                        <Field label={ah.founded}>
                             <input className={inputCls} style={inputStyle}
                                    placeholder="1989"
                                    value={form.founded} onChange={(e) => set('founded', e.target.value)} />
                         </Field>
 
-                        <Field label="Краткое описание *" hint="Показывается в карточке каталога">
+                        {/* Язык описаний */}
+                        <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: '#DAE3E8' }}>
+                            {(['RU', 'EN', 'KO'] as const).map(l => (
+                                <button key={l} type="button" onClick={() => setDescLang(l)}
+                                    className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                                    style={descLang === l
+                                        ? { backgroundColor: '#21393B', color: '#F7FAE8' }
+                                        : { backgroundColor: 'transparent', color: '#21393B' }}>
+                                    {l}
+                                </button>
+                            ))}
+                        </div>
+
+                        <Field label={ah.shortDesc.replace('{lang}', descLang)} hint={ah.shortDescHint}>
                             <textarea className={inputCls + " resize-none"} style={inputStyle} rows={2}
                                       placeholder="Крупнейший медицинский центр Кореи..."
-                                      value={form.description} onChange={(e) => set('description', e.target.value)} />
+                                      value={descI18n[descLang]}
+                                      onChange={(e) => setDescI18n(p => ({ ...p, [descLang]: e.target.value }))} />
                         </Field>
 
-                        <Field label="Детальное описание" hint="Показывается на странице клиники">
-                            <textarea className={inputCls + " resize-none"} style={inputStyle} rows={2}
+                        <Field label={ah.fullDesc.replace('{lang}', descLang)} hint={ah.fullDescHint}>
+                            <textarea className={inputCls + " resize-none"} style={inputStyle} rows={4}
                                       placeholder="Подробное описание истории, специализации..."
-                                      value={form.fullDescription} onChange={(e) => set('fullDescription', e.target.value)} />
+                                      value={fullDescI18n[descLang]}
+                                      onChange={(e) => setFullDescI18n(p => ({ ...p, [descLang]: e.target.value }))} />
                         </Field>
 
-                        <Field label="Специализации" hint="Через запятую: Онкология, Кардиология">
-                            <input className={inputCls} style={inputStyle}
-                                   placeholder="Онкология, Кардиология, Нейрохирургия"
-                                   value={form.specializations} onChange={(e) => set('specializations', e.target.value)} />
+                        <Field label={ah.specs} hint={ah.specsHint}>
+                            <SpecPicker value={form.specializations} onChange={(v) => set('specializations', v)} />
                         </Field>
 
-                        <Field label="Сертификаты" hint="Через запятую: JCI, KOIHA">
+                        <Field label={ah.certs} hint={ah.certsHint}>
                             <input className={inputCls} style={inputStyle}
                                    placeholder="JCI, KOIHA"
                                    value={form.certifications} onChange={(e) => set('certifications', e.target.value)} />
                         </Field>
 
-                        <Field label="Коек">
+                        <Field label={ah.beds}>
                             <input className={inputCls} style={inputStyle} type="number"
                                    placeholder="2700"
                                    value={form.beds} onChange={(e) => set('beds', e.target.value)} />
                         </Field>
 
-                        <Field label="Врачей">
+                        <Field label={ah.doctors}>
                             <input className={inputCls} style={inputStyle} type="number"
                                    placeholder="9000"
                                    value={form.doctors} onChange={(e) => set('doctors', e.target.value)} />
                         </Field>
 
-                        <Field label="Фото (URL)" hint="Главное фото клиники">
+                        <Field label={ah.logoUrl} hint={ah.logoUrlHint}>
                             <input className={inputCls} style={inputStyle} type="url"
                                    placeholder="https://..."
                                    value={form.logoUrl} onChange={(e) => set('logoUrl', e.target.value)} />
                         </Field>
 
-                        <Field label="Адрес">
+                        <Field label={ah.address}>
                             <input className={inputCls} style={inputStyle}
                                    placeholder="88 Olympic-ro, Seoul"
                                    value={form.address} onChange={(e) => set('address', e.target.value)} />
                         </Field>
 
-                        <Field label="Телефон">
+                        <Field label={ah.phone}>
                             <input className={inputCls} style={inputStyle}
                                    placeholder="+82-2-3010-3114"
                                    value={form.phone} onChange={(e) => set('phone', e.target.value)} />
@@ -221,38 +299,75 @@ export default function HospitalsAdminPage() {
                                    value={form.email} onChange={(e) => set('email', e.target.value)} />
                         </Field>
 
-                        <Field label="Сайт" hint="С https://">
+                        <Field label={ah.website} hint={ah.websiteHint}>
                             <input className={inputCls} style={inputStyle} type="url"
                                    placeholder="https://www.hospital.kr"
                                    value={form.website} onChange={(e) => set('website', e.target.value)} />
                         </Field>
 
-                        {/* Превью фото */}
+                        {/* Превью главного фото */}
                         {form.logoUrl && (
                             <div className="md:col-span-2">
-                                <p className="text-label mb-2" style={{ color: '#21393B' }}>Превью фото</p>
+                                <p className="text-label mb-2" style={{ color: '#21393B' }}>{ah.photoPreview}</p>
                                 <div className="h-[160px] w-full rounded-xl overflow-hidden">
                                     <img src={form.logoUrl} alt="preview" className="w-full h-full object-cover" />
                                 </div>
                             </div>
                         )}
+
+                        {/* Фото галереи */}
+                        <div className="md:col-span-2 flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-label" style={{ color: '#21393B' }}>{ah.galleryPhotos}</p>
+                                <button type="button" onClick={addPhoto}
+                                    className="text-sm px-3 py-1.5 rounded-xl transition-colors"
+                                    style={{ backgroundColor: '#DAE3E8', color: '#21393B' }}>
+                                    {ah.addPhoto}
+                                </button>
+                            </div>
+                            {photos.length === 0 && (
+                                <p className="text-caption" style={{ color: '#21393B', opacity: 0.4 }}>{ah.noGallery}</p>
+                            )}
+                            {photos.map((url, i) => (
+                                <div key={i} className="flex gap-2">
+                                    <input
+                                        className={inputCls + ' flex-1'}
+                                        style={inputStyle}
+                                        type="url"
+                                        placeholder={`https://... (фото ${i + 1})`}
+                                        value={url}
+                                        onChange={(e) => updatePhoto(i, e.target.value)}
+                                    />
+                                    {url && (
+                                        <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0">
+                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
+                                    <button type="button" onClick={() => removePhoto(i)}
+                                        className="px-3 py-2 rounded-xl text-sm shrink-0 transition-colors"
+                                        style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="flex gap-3 mt-6">
                         <button
                             onClick={handleSubmit}
-                            disabled={saving || !form.name.trim() || !form.description.trim()}
+                            disabled={saving || !form.name.trim() || !descI18n.RU.trim()}
                             className="px-6 py-2.5 rounded-xl text-btn text-white disabled:opacity-50 transition-opacity hover:opacity-90"
                             style={{ backgroundColor: '#73907E' }}
                         >
-                            {saving ? 'Сохранение...' : editId ? 'Сохранить изменения' : 'Добавить клинику'}
+                            {saving ? ah.saving : editId ? ah.save : ah.add}
                         </button>
                         {editId && (
                             <button onClick={cancelEdit}
                                     className="px-6 py-2.5 rounded-xl text-btn"
                                     style={{ backgroundColor: '#DAE3E8', color: '#21393B' }}
                             >
-                                Отмена
+                                {ah.cancel}
                             </button>
                         )}
                     </div>
@@ -262,12 +377,12 @@ export default function HospitalsAdminPage() {
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between gap-4">
                         <h2 className="text-h4" style={{ color: '#21393B' }}>
-                            Клиники ({hospitals.length})
+                            {ah.listTitle.replace('{count}', String(hospitals.length))}
                         </h2>
                         <input
                             className={inputCls}
                             style={{ ...inputStyle, maxWidth: 280 }}
-                            placeholder="Поиск по названию..."
+                            placeholder={ah.search}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -281,7 +396,7 @@ export default function HospitalsAdminPage() {
                         </div>
                     ) : filtered.length === 0 ? (
                         <p className="text-body" style={{ color: '#21393B', opacity: 0.5 }}>
-                            {search ? 'Ничего не найдено' : 'Клиники ещё не добавлены'}
+                            {search ? ah.noResults : ah.noClinics}
                         </p>
                     ) : (
                         <div className="flex flex-col gap-3">
@@ -330,26 +445,26 @@ export default function HospitalsAdminPage() {
                                     {/* Кнопки */}
                                     <div className="flex gap-2 shrink-0">
                                         <Link
-                                            href={`/hospitals/${h.id}`}
+                                            href={`/hospital-page?id=${h.id}`}
                                             target="_blank"
                                             className="px-3 py-1.5 rounded-xl text-sm transition-colors"
                                             style={{ backgroundColor: '#F0F2EE', color: '#21393B' }}
                                         >
-                                            ↗ Просмотр
+                                            ↗ {ah.view}
                                         </Link>
                                         <button
                                             onClick={() => startEdit(h)}
                                             className="px-3 py-1.5 rounded-xl text-sm transition-colors"
                                             style={{ backgroundColor: '#DAE3E8', color: '#21393B' }}
                                         >
-                                            Изменить
+                                            {ah.edit}
                                         </button>
                                         <button
                                             onClick={() => setConfirm(h.id)}
                                             className="px-3 py-1.5 rounded-xl text-sm transition-colors"
                                             style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
                                         >
-                                            Удалить
+                                            {ah.delete}
                                         </button>
                                     </div>
                                 </div>
@@ -363,10 +478,8 @@ export default function HospitalsAdminPage() {
             {confirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
-                        <h3 className="text-h4 mb-2" style={{ color: '#21393B' }}>Удалить клинику?</h3>
-                        <p className="text-caption mb-6" style={{ color: '#21393B', opacity: 0.7 }}>
-                            Это действие нельзя отменить. Страница клиники также перестанет работать.
-                        </p>
+                        <h3 className="text-h4 mb-2" style={{ color: '#21393B' }}>{ah.deleteTitle}</h3>
+                        <p className="text-caption mb-6" style={{ color: '#21393B', opacity: 0.7 }}>{ah.deleteDesc}</p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => handleDelete(confirm)}
@@ -374,14 +487,14 @@ export default function HospitalsAdminPage() {
                                 className="flex-1 py-2.5 rounded-xl text-btn text-white disabled:opacity-50"
                                 style={{ backgroundColor: '#b91c1c' }}
                             >
-                                {saving ? '...' : 'Удалить'}
+                                {saving ? '...' : ah.delete}
                             </button>
                             <button
                                 onClick={() => setConfirm(null)}
                                 className="flex-1 py-2.5 rounded-xl text-btn"
                                 style={{ backgroundColor: '#DAE3E8', color: '#21393B' }}
                             >
-                                Отмена
+                                {ah.cancel}
                             </button>
                         </div>
                     </div>

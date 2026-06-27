@@ -14,7 +14,7 @@ const LANGS: { code: Lang; label: string; flag: string }[] = [
 ];
 
 export default function Header() {
-  const { profile }  = useAuth();
+  const { profile, role, loading }  = useAuth();
   const pathname  = usePathname();
   const { lang, setLang, t } = useLanguage();
 
@@ -105,9 +105,11 @@ export default function Header() {
                 )}
               </div>
 
-              {profile ? (
+              {loading ? (
+                  <div className="w-24 h-8 rounded-xl bg-gray-100 animate-pulse" />
+              ) : profile ? (
                   <Link
-                      href="/profile"
+                      href={role === 'admin' ? '/admin-panel' : '/profile'}
                       className="flex items-center gap-2 px-3 py-1 rounded-xl border border-[#6B8B80] text-[#21393B] text-sm font-medium bg-[#DAE3E8] hover:bg-[#DAE3E8]/50 transition-colors"
                   >
                     <img src="/icons/nameauth.svg" alt="" className="h-4 w-4" />
@@ -216,7 +218,7 @@ export default function Header() {
                 {/* Профиль / Войти */}
                 {profile ? (
                     <Link
-                        href="/profile"
+                        href={role === 'admin' ? '/admin-panel' : '/profile'}
                         onClick={() => setMobileOpen(false)}
                         className="flex items-center gap-4 px-3 py-4 rounded-xl text-[16px] text-[#21393B] hover:bg-gray-50 transition-colors"
                     >

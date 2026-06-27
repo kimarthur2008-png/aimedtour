@@ -11,15 +11,11 @@ import { useLanguage } from '@/context/LanguageContext';
 
 interface Consultation {
   id:               string;
-  name:             string;
-  email:            string;
-  country?:         string;
-  birthDate?:       string;
   clinicName?:      string;
   consultDate?:     string;
-  message?:         string;
   status:           ConsultationStatus;
   coordinatorName?: string;
+  coordinatorId?:   string;
   createdAt?:       { seconds: number } | string;
 }
 
@@ -102,6 +98,23 @@ export default function ConsultationsAdminPage() {
 
         <h1 className="text-h2 mb-6" style={{ color: '#21393B' }}>{a.consultations.title}</h1>
 
+        {/* Статистика */}
+        {!loading && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {([
+              { label: 'Всего', count: items.length, bg: '#21393B', fg: '#F7FAE8' },
+              { label: statusLabels['new'],         count: items.filter(i => i.status === 'new').length,         bg: '#EFF6FF', fg: '#1d4ed8' },
+              { label: statusLabels['in-progress'], count: items.filter(i => i.status === 'in-progress').length, bg: '#FFFBEB', fg: '#b45309' },
+              { label: statusLabels['done'],        count: items.filter(i => i.status === 'done').length,        bg: '#F0FDF4', fg: '#15803d' },
+            ] as const).map(({ label, count, bg, fg }) => (
+              <div key={label} className="rounded-2xl px-5 py-4 flex flex-col gap-1" style={{ backgroundColor: bg }}>
+                <p className="text-2xl font-bold" style={{ color: fg }}>{count}</p>
+                <p className="text-xs opacity-70" style={{ color: fg }}>{label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2 mb-6 flex-wrap">
           {(['all', 'new', 'in-progress', 'done'] as const).map((s) => (
             <button key={s} onClick={() => setFilter(s)}
@@ -126,9 +139,12 @@ export default function ConsultationsAdminPage() {
                 style={{ borderColor: selected?.id === item.id ? '#21393B' : '#DAE3E8' }}>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate" style={{ color: '#21393B' }}>{item.name}</p>
-                    <p className="text-xs opacity-60 truncate" style={{ color: '#21393B' }}>{item.email}</p>
-                    {item.clinicName && <p className="text-xs opacity-50 truncate" style={{ color: '#21393B' }}>{item.clinicName}</p>}
+                    <p className="font-semibold text-sm truncate" style={{ color: '#21393B' }}>
+                      {item.clinicName ?? '—'}
+                    </p>
+                    <p className="text-xs opacity-50 truncate" style={{ color: '#21393B' }}>
+                      {item.coordinatorName ? `Координатор: ${item.coordinatorName}` : 'Координатор не назначен'}
+                    </p>
                   </div>
                   <div className="shrink-0 flex flex-col items-end gap-1">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[item.status]}`}>
@@ -150,10 +166,6 @@ export default function ConsultationsAdminPage() {
 
               <div className="flex flex-col gap-2 text-sm mb-5">
                 {[
-                  [a.consultations.fields.name,        selected.name],
-                  [a.consultations.fields.email,       selected.email],
-                  [a.consultations.fields.country,     selected.country],
-                  [a.consultations.fields.birth,       selected.birthDate],
                   [a.consultations.fields.clinic,      selected.clinicName],
                   [a.consultations.fields.date,        selected.consultDate],
                   [a.consultations.fields.coordinator, selected.coordinatorName],
@@ -164,11 +176,6 @@ export default function ConsultationsAdminPage() {
                     <span className="font-medium" style={{ color: '#21393B' }}>{val}</span>
                   </div>
                 ) : null)}
-                {selected.message && (
-                  <div className="mt-1 p-3 rounded-xl text-xs" style={{ backgroundColor: '#F0F4F2', color: '#21393B' }}>
-                    {selected.message}
-                  </div>
-                )}
               </div>
 
               <div className="flex flex-col gap-2">
